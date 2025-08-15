@@ -41,13 +41,19 @@ SKILLS
 ENEMIES
     Kobold
 
-Emerald Ring --GREEN
-Sapphire Bracelet --BLUE
-Ruby Necklace --RED
-Citrine Brooch --YELLOW
+MAGIC STONES: found at each ruin
+    - yes I stole these from Beregon's jam -
+    Emerald Ring --GREEN        -> wind
+    Sapphire Bracelet --BLUE    -> fire
+    Ruby Necklace --RED         -> ice
+    Citrine Brooch --YELLOW     -> ?, cut from game?
 
 SETTING
-    
+    The world as we know it is young, but older than any of our great-great grandparents. There is lush green pastures, 
+    but also wilderness and danger. We live to feed ourselves and survive.
+    At four islands there is four ruins from ancient times. Each of these ruins hold immense dangers, but also great powers.
+    Nobody knows nothing about these ruins. They don't know who made them, when, why or how they appeared, they've very much 
+    been there since ever. And nobody dares to explore them.
 
 STORY
     Story starts in the forest near Lin's town.
@@ -57,8 +63,8 @@ STORY
     Lin appears in their rescue and punches Rayne in the face (first battle).
     Rayne escapes, the others go to his capture.
     Lin comes back to town, and finds Rayne imprisoned.
-    Rayne gives Lin a sob story for why he wants to enter the ruins.
-    Lin either (a)breaks him out or (b)ignores him.
+    Rayne gives Lin a sob story for why he wants to enter the ruins (it's all lies).
+    Rayne seems to have knowledge about the ruins and Lin is interested. Lin either (a)breaks him out or (b)ignores him.
         (a) will get you expelled from the town
     Either help or not, a big explosion is heard, in the direction of the ruins?
     A group of monsters attacks the town? or something related to the ruins.
