@@ -1,0 +1,51 @@
+Start: 2025-08-06
+
+MAP
+    DONE    map base
+    DONE    player
+    DONE    event placement
+    DONE    interpreter
+    DONE    message box
+    DONE    set flag
+    DONE    label
+    DONE    conditional jump
+        show options
+        call battle
+        call shop
+        call naming
+TITLE
+        background
+        select window
+        start game
+        load game
+BATTLE
+    DONE    actors data
+    DONE    party
+        skills data
+        enemies data
+        scene setup
+        battle cycle
+        action
+        action effects
+        judge
+        battle end
+MENU
+        main screen
+        inventory
+            use item
+            select target
+        skills
+            use skill
+            select target
+        equip
+            change equip
+        save game
+SHOP
+        ui screens
+        buy
+        sell
+        exit
+NAMING
+        ui screen
+        pick letter
+        end

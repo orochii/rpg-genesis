@@ -1,0 +1,67 @@
+CHARACTERS
+    LIN
+        Young girl from some town (?). Has experience with the bow and daggers, agile fighter. Raised as a hunter.
+        She likes exploring and adventure.
+    RAYNE
+        Magician guy from the magic arts school. Left the school out of "disagreements" with his mentor.
+        Wants to make a living by researching the ruins, maybe sell one or two relics and get filthy rich.
+    GREESE
+        An ancient robot from the nearby ruins. Very sturdy.
+        Knows nothing of the present world, follows you around after being waken up in the ruin.
+
+SKILLS
+    Attack      -   Deals basic damage. Uses animation based on weapon equipped.
+    Guard       -   Halves incoming damage. Restores (1x Mag)MP.
+ P  Critical    1   Damage boosted basic attack. 1.2x Atk on damage calculation.
+    Tackle      1   Deals basic damage. Applies STUN. High chance of miss. STUN denies action for 1 turn.
+    Provoke     1   Redirects attacks towards themselves this turn. Halves incoming damage.
+    Laser       2   Deals basic magic damage. Ignores defense.
+        IDEA: Chance to spend extra MP to boost any action (+0.1x dmg per 1MP, etc).
+ B  Fire        2   Deals basic fire damage to one. Lowers attack.
+    Flame       4   Deals mid fire damage to all.
+    Inferno     6   Deals high fire damage to one.
+    Burn        3   Applies BURN to one. BURN lowers HP by 1/16 per turn.
+    Ice         2   Deals basic ice damage to one. Lowers defense.
+    Winter      4   Deals mid ice damage to all.
+    Blizzard    6   Deals high ice damage to one.
+    Freeze      3   Applies FROZEN to one. FROZEN denies action for 1-2 turns.
+    Windcut     2   Deals basic wind damage to one. Lowers speed.
+    Storm       4   Deals mid wind damage to all.
+    Thunder     6   Deals high wind damage to one.
+    Evasion     3   Applies EVASION. Avoids physical damage for 1-2 turns.
+ W  Heal        2   Heals basic damage to one.
+    Regen       5   Applies REGEN to all. REGEN heals 1/16 per turn.
+    Remedy      3   Heals bad status effects (BURN, FROZEN).
+    Revive      5   Revives one with 50% health.
+    Strong      6   Raises attack.
+    Durable     6   Raises defense.
+    Sage        6   Raises magic.
+    Swift       6   Raises speed.
+
+ENEMIES
+    Kobold
+
+Emerald Ring --GREEN
+Sapphire Bracelet --BLUE
+Ruby Necklace --RED
+Citrine Brooch --YELLOW
+
+SETTING
+    
+
+STORY
+    Story starts in the forest near Lin's town.
+    Lin walks through the forest and finds a mysterious guy there.
+    That guy happens to be Rayne, who is looking for the ruins in the forest.
+    Rayne attacks "by mistake" some of the people from the town as they were denying him entrance to the area towards the ruins.
+    Lin appears in their rescue and punches Rayne in the face (first battle).
+    Rayne escapes, the others go to his capture.
+    Lin comes back to town, and finds Rayne imprisoned.
+    Rayne gives Lin a sob story for why he wants to enter the ruins.
+    Lin either (a)breaks him out or (b)ignores him.
+        (a) will get you expelled from the town
+    Either help or not, a big explosion is heard, in the direction of the ruins?
+    A group of monsters attacks the town? or something related to the ruins.
+        (b) If you don't help Rayne he gets out somehow.
+    There's signs the creatures come from the ruins.
+    You decide to join forces with Rayne and accept to accompany him to the ruins.
