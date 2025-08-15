@@ -49,7 +49,7 @@ MAGIC STONES: found at each ruin
     Citrine Brooch --YELLOW     -> ?, cut from game?
 
 SETTING
-    The world as we know it is young, but older than any of our great-great grandparents. There is lush green pastures, 
+    The world as we know it is young, but older than any of our great-great grandparents. There is lush green pastures and peaceful villages living in harmony,
     but also wilderness and danger. We live to feed ourselves and survive.
     At four islands there is four ruins from ancient times. Each of these ruins hold immense dangers, but also great powers.
     Nobody knows nothing about these ruins. They don't know who made them, when, why or how they appeared, they've very much 
