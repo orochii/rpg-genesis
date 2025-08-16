@@ -1,13 +1,13 @@
 CHARACTERS
     LIN
         Young girl from some town (?). Has experience with the bow and daggers, agile fighter. Raised as a hunter.
-        She likes exploring and adventure.
+        She likes exploring and adventure. She wants to protect her town, while also having a certain curiosity for the outside world.
     RAYNE
         Magician guy from the magic arts school. Left the school out of "disagreements" with his mentor.
-        Wants to make a living by researching the ruins, maybe sell one or two relics and get filthy rich.
+        Wants to make a living by researching the ruins, maybe sell one or two relics and get filthy rich. He's also definitely a scholar with thirst for knowledge and it's very knowledgeable about many things, but his greed shows the worst of him.
     GREESE
         An ancient robot from the nearby ruins. Very sturdy.
-        Knows nothing of the present world, follows you around after being waken up in the ruin.
+        Knows nothing of the present world, follows you around after being waken up in the ruin. Wants to know why he was "born" in this world, and where are his friends.
 
 SKILLS
     Attack      -   Deals basic damage. Uses animation based on weapon equipped.
@@ -49,11 +49,9 @@ MAGIC STONES: found at each ruin
     Citrine Brooch --YELLOW     -> ?, cut from game?
 
 SETTING
-    The world as we know it is young, but older than any of our great-great grandparents. There is lush green pastures and peaceful villages living in harmony,
-    but also wilderness and danger. We live to feed ourselves and survive.
-    At four islands there is four ruins from ancient times. Each of these ruins hold immense dangers, but also great powers.
-    Nobody knows nothing about these ruins. They don't know who made them, when, why or how they appeared, they've very much 
-    been there since ever. And nobody dares to explore them.
+    The world as we know it is young, but older than any of our great-great grandparents. There is lush green pastures and peaceful villages living in harmony, but also wilderness and danger. We live to feed ourselves and survive.
+    There is four ruins from ancient times, each located on a different island. Each of these ruins hold immense dangers, but also great powers. One of such relics is the magic amulet, and it's guardian.
+    Nobody knows nothing about these ruins. They don't know who made them, when, why or how they appeared, they've very much been there since ever. And nobody dares to explore them.
 
 STORY
     Story starts in the forest near Lin's town.
