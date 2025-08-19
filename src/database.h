@@ -4,11 +4,16 @@
 typedef struct {
 	u16 characterIdx;
 	u16 characterIdxWmap;
+	u16 battlerIdx;
 	const char* name;
 	u16 hp,mp,atk,def,mag,spd;
 	u16 hpPlus,mpPlus,atkPlus,defPlus,magPlus,spdPlus;
 } RPG_DataHero;
-
+typedef struct {
+	u16 battlerIdx;
+	const char* name;
+	u16 hp,mp,atk,def,mag,spd;
+} RPG_DataEnemy;
 typedef struct {
 	char condition;
 	u16 compare;
@@ -49,6 +54,9 @@ typedef struct {
 	int ox;
 	int oy;
 } RPG_DataCharacter;
+typedef struct {
+	SpriteDefinition* graphic;
+} RPG_DataBattler;
 
 const RPG_DataCharacter DATA_CHARS[6] = {
 	{ &char1, 16, 4, 0, 4 },
@@ -58,11 +66,28 @@ const RPG_DataCharacter DATA_CHARS[6] = {
 	{ &char3, 16, 4, 0, 4 },
 	{ &char3_wmap, 16, 4, 0, 4 },
 };
+const RPG_DataBattler DATA_BATTLERS[4] = {
+	{ &char1_battler },
+	{ &char2_battler },
+	{ &char3_battler },
+	{ &worm_battler },
+};
 const RPG_DataHero DATA_HEROS[3] = {
-	//c  w  name        hp mp  a d m s     hp mp a d m s
-	{ 0, 1, "Lin",		20, 5, 5,6,4,8,		5,2, 2,1,1,2 },
-	{ 2, 3, "Rayne",	12, 8, 2,4,8,6,		4,3, 1,1,2,2 },
-	{ 4, 5, "Greese",	40, 2, 9,9,2,4,		6,1, 2,2,1,1 },
+	//c  w  b  name         hp mp  a d m s     	hp mp a d m s
+	{ 0, 1, 0, "Lin",		20, 5, 5,6,4,8,		5,2, 2,1,1,2 },
+	{ 2, 3, 1, "Rayne",	12, 8, 2,4,8,6,			4,3, 1,1,2,2 },
+	{ 4, 5, 2, "Greese",	40, 2, 9,9,2,4,		6,1, 2,2,1,1 },
+};
+const RPG_DataEnemy DATA_ENEMIES[1] = {
+	//b				hp mp  a d m s
+	{ 3, "Worm", 	30, 5, 6,3,1,4 },
+};
+const u16 DATA_FORMATION1[4] = {
+	1, //size
+	0, 80, 160, //id, x, y
+};
+const u16* DATA_FORMATIONS[1] = {
+	&DATA_FORMATION1,
 };
 
 const u16* DATA_SCRIPT_EMPTY[1] = { 0 };

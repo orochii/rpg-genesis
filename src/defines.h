@@ -8,6 +8,7 @@
 #define MAX_FLAGS 256
 #define MAX_HEROS 3
 #define MAX_PARTY 3
+#define MAX_TROOP 6
 #define MAX_GOLD 999999
 #define MAX_INVENTORY 60
 

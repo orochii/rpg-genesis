@@ -34,7 +34,10 @@ void scene_update() {
 void scene_goto(void* create, void* update, void* destroy) {
 	if (scene.initialized) {
 		scene.initialized = false;
+		scene.destroy();
 		scene.destroyed = true;
+		// Vsync
+		SYS_doVBlankProcess();
 	}
 	scene.create = create;
 	scene.update = update;

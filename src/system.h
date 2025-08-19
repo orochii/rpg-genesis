@@ -2,6 +2,8 @@
 #include <resources.h>
 #include <genesis.h>
 
+u16 sys_pal = PAL3;
+
 void sys_drawWindow(u16 x, u16 y, u16 w, u16 h, u16 indexStart) {
 	w-=1;
 	h-=1;
@@ -48,6 +50,10 @@ void sys_setFont(bool transparent) {
 void sys_drawText(const char* str, u16 x, u16 y, bool system) {
 	u16 basetile = system ? TILE_ATTR_FULL(PAL2, TRUE, FALSE, FALSE, 0) : TILE_ATTR_FULL(PAL3, TRUE, FALSE, FALSE, 0);
 	VDP_drawTextEx(BG_A, str, basetile, x, y, DMA);
+}
+void sys_drawTextBack(const char* str, u16 x, u16 y, u16 pal) {
+	u16 basetile = TILE_ATTR_FULL(pal, TRUE, FALSE, FALSE, 0);
+	VDP_drawTextEx(BG_B, str, basetile, x, y, DMA);
 }
 
 void sys_processText(char* to, u16 len, const char* from) {
@@ -144,4 +150,27 @@ bool sys_compare(u16 value, u16 compare, u16 check) {
 		case EVP_CMP_NOTEQUAL:
 			return value != check;
 	}
+}
+
+void sys_fadeOut(u16 frames) {
+	u16 frameCount = frames;
+    PAL_fadeOutAll(frames, true);
+    while (frameCount > 0) {
+        frameCount--;
+        SYS_doVBlankProcess();
+    }
+}
+
+void sys_fadeIn(u16 frames) {
+	u16 frameCount = frames;
+	u16* pal[64];
+	PAL_getPalette(PAL0, pal[0]);
+	PAL_getPalette(PAL1, pal[16]);
+	PAL_getPalette(PAL2, pal[32]);
+	PAL_getPalette(PAL3, pal[48]);
+	PAL_fadeInAll(pal, frames, false);
+	/*while (frameCount > 0) {
+        frameCount--;
+        SYS_doVBlankProcess();
+    }*/
 }

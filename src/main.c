@@ -10,6 +10,7 @@ int main(bool hard)
 	state_init();
     /// SCENE CREATION
 	scene_goto(scenemap_create, scenemap_update, scenemap_destroy);
+	//scene_goto(scenebattle_create, scenebattle_update, scenebattle_destroy);
 	// Main loop
 	while(1)
 	{

@@ -10,7 +10,22 @@ typedef struct {
 	u16 exp; // 1000exp per level
 	u16 currHp,currMp;
 	u16 hp,mp,atk,def,mag,spd;
+	// states
+	// skills
+	// equip
 } RPG_StateHero;
+typedef struct {
+	char* name;
+	char battlerIdx;
+	bool hidden;
+	u16 x, y;
+	char sprIdx;
+	// 
+	u16 currHp,currMp;
+	u16 hp,mp,atk,def,mag,spd; // Calculated value (only when needed)
+	u16 origHp,origMp,origAtk,origDef,origMag,origSpd; // original value. enemy=database, hero=state value
+	// states
+} RPG_StateBattler;
 
 typedef struct {
 	char* members[MAX_PARTY]; // 3
@@ -102,13 +117,13 @@ void state_setupCharacter(u16 id, char avgLevel) {
 }
 void state_initCharacters() {
 	for (int i = 0; i < MAX_HEROS; i++) {
-		state_setupCharacter(i, 4);
+		state_setupCharacter(i, 50);
 	}
 }
 void state_initParty() {
 	party.members[0] = 0;
-	party.members[1] = -1;
-	party.members[2] = -1;
+	party.members[1] = 1;
+	party.members[2] = 2;
 	party.gold = 100;
 	for (int i = 0; i < MAX_INVENTORY; i++) {
 		party.inventoryItemId[i] = 0;

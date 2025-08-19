@@ -21,9 +21,10 @@ void scenemap_createSprite(int id, int x, int y, u16 pal) {
 }
 
 void scenemap_create() {
+	sys_pal = PAL3;
 	// Load window
 	VDP_loadTileSet(&ts_system, tileIdx, DMA);
-	tileIdx += ts_font1.numTile;
+	tileIdx += ts_system.numTile;
 	// Setup background
 	VDP_loadTileSet(DATA_MAPS[map.id].tileset, tileIdx, DMA);
 	PAL_setPalette(PAL0, DATA_MAPS[map.id].paletteA->data, DMA);
@@ -34,10 +35,14 @@ void scenemap_create() {
 	//Set player sprite
 	PAL_setPalette(PAL2, DATA_CHARS[player.id].graphic->palette->data, DMA);
 	scenemap_createSprite(player.id, player.posX, player.posY, player.pal);
+	player.updateFrame = true;
 	for (int i = 0; i < map.numEvents; i++) {
 		RPG_StateCharacter ev = map.events[i];
 		scenemap_createSprite(ev.id, ev.posX, ev.posY, ev.pal);
+		ev.updateFrame = true;
 	}
+	// a
+	//sys_fadeIn(20);
 	// Avoid re-creating sprites on reentering the scene.
 	map.refreshEvents = false;
 }
@@ -234,6 +239,9 @@ void scenemap_updateEvents() {
 		}
 	}
 }
+void scenebattle_create();
+void scenebattle_update();
+void scenebattle_destroy();
 
 void scenemap_update() {
 	/// Player update
@@ -290,6 +298,9 @@ void scenemap_update() {
 	}
 	else {
 		scenemap_updateInput();
+		if (input_trigger(BUTTON_C)) {
+			scene_goto(scenebattle_create, scenebattle_update, scenebattle_destroy);
+		}
 	}
 	// If moving
 	character_updateMoving(&player);
@@ -307,9 +318,18 @@ void scenemap_update() {
 }
 
 void scenemap_destroy() {
+	// 
+    sys_fadeOut(20);
 	// cleanup map
 	MEM_free(bga);
+	VDP_fillTileMapRect(BG_B, 0, 0, 0, 40, 30);
+	VDP_setHorizontalScroll(BG_B, 0);
+	VDP_setVerticalScroll(BG_B, 0);
 	// cleanup sprites
 	SPR_releaseSprite(mapSprites[0]);
+	for (int i = 0; i < map.numEvents; i++) {
+		RPG_StateCharacter ev = map.events[i];
+		SPR_releaseSprite(mapSprites[i+1]);
+	}
 	mapSprites_c = 0;
 }
