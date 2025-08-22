@@ -4,7 +4,6 @@ int main(bool hard)
 {
 	// Initialize sprite system
 	SPR_init();
-	PAL_setPalette(PAL3, pa_system.data, DMA);
 	sys_setFont(false);
 	// Initialize game
 	state_init();

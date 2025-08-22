@@ -30,13 +30,23 @@ SKILLS
     Thunder     6   Deals high wind damage to one.
     Evasion     3   Applies EVASION. Avoids physical damage for 1-2 turns.
  W  Heal        2   Heals basic damage to one.
-    Regen       5   Applies REGEN to all. REGEN heals 1/16 per turn.
+    Regen       5   Applies REGEN to all. REGEN heals 1/4 per turn.
     Remedy      3   Heals bad status effects (BURN, FROZEN).
     Revive      5   Revives one with 50% health.
     Strong      6   Raises attack.
     Durable     6   Raises defense.
     Sage        6   Raises magic.
     Swift       6   Raises speed.
+
+STATES
+    STUN        1           Stops action.
+    BURN        --          Lowers HP by 1/16 per turn.
+    FROZEN      1-2 turns   Stops action.
+    PROVOKE     1           Becomes enemy target.
+    EVASION     1-2 turns   Avoids physical damage.
+    REGEN       2 turns     Heals 1/4 per turn.
+    --
+    --
 
 ENEMIES
     Kobold

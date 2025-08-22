@@ -22,6 +22,7 @@ void scenemap_createSprite(int id, int x, int y, u16 pal) {
 
 void scenemap_create() {
 	sys_pal = PAL3;
+	PAL_setPalette(PAL3, pa_system.data, DMA);
 	// Load window
 	VDP_loadTileSet(&ts_system, tileIdx, DMA);
 	tileIdx += ts_system.numTile;

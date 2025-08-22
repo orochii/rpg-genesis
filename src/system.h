@@ -9,15 +9,15 @@ void sys_drawWindow(u16 x, u16 y, u16 w, u16 h, u16 indexStart) {
 	h-=1;
 	u16 xw = x+w;
 	u16 yh = y+h;
-	u16 t_tl = TILE_ATTR_FULL(PAL3, TRUE, 0, 0, indexStart);
-	u16 t_tr = TILE_ATTR_FULL(PAL3, TRUE, 0, 1, indexStart);
-	u16 t_bl = TILE_ATTR_FULL(PAL3, TRUE, 1, 0, indexStart);
-	u16 t_br = TILE_ATTR_FULL(PAL3, TRUE, 1, 1, indexStart);
-	u16 t_tm = TILE_ATTR_FULL(PAL3, TRUE, 0, 0, indexStart+1);
-	u16 t_bm = TILE_ATTR_FULL(PAL3, TRUE, 1, 0, indexStart+1);
-	u16 t_ml = TILE_ATTR_FULL(PAL3, TRUE, 0, 0, indexStart+2);
-	u16 t_mr = TILE_ATTR_FULL(PAL3, TRUE, 0, 1, indexStart+2);
-	u16 t_mm = TILE_ATTR_FULL(PAL3, TRUE, 0, 0, indexStart+3);
+	u16 t_tl = TILE_ATTR_FULL(sys_pal, TRUE, 0, 0, indexStart);
+	u16 t_tr = TILE_ATTR_FULL(sys_pal, TRUE, 0, 1, indexStart);
+	u16 t_bl = TILE_ATTR_FULL(sys_pal, TRUE, 1, 0, indexStart);
+	u16 t_br = TILE_ATTR_FULL(sys_pal, TRUE, 1, 1, indexStart);
+	u16 t_tm = TILE_ATTR_FULL(sys_pal, TRUE, 0, 0, indexStart+1);
+	u16 t_bm = TILE_ATTR_FULL(sys_pal, TRUE, 1, 0, indexStart+1);
+	u16 t_ml = TILE_ATTR_FULL(sys_pal, TRUE, 0, 0, indexStart+2);
+	u16 t_mr = TILE_ATTR_FULL(sys_pal, TRUE, 0, 1, indexStart+2);
+	u16 t_mm = TILE_ATTR_FULL(sys_pal, TRUE, 0, 0, indexStart+3);
 	//
 	for (int yy = y; yy <= yh; yy++) {
 		for (int xx = x; xx <= xw; xx++) {
@@ -47,8 +47,86 @@ void sys_setFont(bool transparent) {
 	else VDP_loadTileSet(&ts_font1, 1440, DMA);
 }
 
+void sys_drawItemDesc(u16 x, u16 y, u16 w, u16 idx) {
+	// Clear
+	u16 t_mm = TILE_ATTR_FULL(sys_pal, TRUE, 0, 0, TILE_USER_INDEX+3);
+    VDP_fillTileMapRect(BG_A,t_mm,x,y,w,1);
+	// Draw
+	u8 itemId = party.inventoryItemId[idx];
+	if (itemId==0) return;
+    char* desc = DATA_ITEMS[itemId-1].desc;
+    sys_drawText(desc,x,y,false);
+}
+void sys_drawItemList(u16 x, u16 y, u16 w, u16 h, u16 topRow, u16 selectedIdx) {
+	char* str[w];
+	u16 t_mm = TILE_ATTR_FULL(sys_pal, TRUE, 0, 0, TILE_USER_INDEX+3);
+	VDP_fillTileMapRect(BG_A, t_mm, x,y, w,h);
+	for (int i=0; i<h; i++) {
+		int idx = topRow + i;
+		if (idx >= 60) break;
+		u8 itemId = party.inventoryItemId[idx];
+		u8 itemQty = party.inventoryItemQty[idx];
+		if (itemId==0 || itemQty==0) break;
+		char* item = DATA_ITEMS[itemId-1].name;
+		bool selected = idx == selectedIdx;
+		if (selected) {
+			sprintf(str, "`%s", item);
+		} else {
+			sprintf(str, " %s", item);
+		}
+		sys_drawText(str, x, y+i, selected);
+		sprintf(str, ":%2d", itemQty);
+		sys_drawText(str, x+w-3, y+i, selected);
+	}
+}
+void sys_drawSkillDesc(u16 x, u16 y, u16 w, u16 idx, u8* list) {
+	// Clear
+	u16 t_mm = TILE_ATTR_FULL(sys_pal, TRUE, 0, 0, TILE_USER_INDEX+3);
+    VDP_fillTileMapRect(BG_A,t_mm,x,y,w,1);
+	// Draw
+	u8 skillId = list[idx];
+	if (skillId==0) return;
+    char* desc = DATA_SKILLS[skillId-1].desc;
+    sys_drawText(desc,x,y,false);
+}
+void sys_drawSkillList(u16 x, u16 y, u16 w, u16 h, u16 topRow, u16 selectedIdx, u8* list) {
+	char* str[w];
+	u16 t_mm = TILE_ATTR_FULL(sys_pal, TRUE, 0, 0, TILE_USER_INDEX+3);
+	VDP_fillTileMapRect(BG_A, t_mm, x,y, w,h);
+	u16 i = 0;
+	while(list[i+topRow] != 0) {
+		int idx = topRow + i;
+		u8 skillId = list[idx];
+		RPG_DataSkill* item = &DATA_SKILLS[skillId-1];
+		bool selected = idx == selectedIdx;
+		if (selected) {
+			sprintf(str, "`%s", item->name);
+		} else {
+			sprintf(str, " %s", item->name);
+		}
+		sys_drawText(str, x, y+i, selected);
+		sprintf(str, " %2d", item->mpCost);
+		sys_drawText(str, x+w-3, y+i, selected);
+		i++;
+	}
+}
+
+void sys_drawOptions(const char** list, u16 size, u16 x, u16 y, u16 selectedIdx) {
+	char* str[16];
+	for (int idx = 0; idx < size; idx++) {
+		char* item = list[idx];
+		if (idx == selectedIdx) {
+			sprintf(str, "`%s", item);
+			sys_drawText(str, x, y+idx, true);
+		} else {
+			sprintf(str, " %s", item);
+			sys_drawText(str, x, y+idx, false);
+		}
+	}
+}
+
 void sys_drawText(const char* str, u16 x, u16 y, bool system) {
-	u16 basetile = system ? TILE_ATTR_FULL(PAL2, TRUE, FALSE, FALSE, 0) : TILE_ATTR_FULL(PAL3, TRUE, FALSE, FALSE, 0);
+	u16 basetile = system ? TILE_ATTR_FULL(PAL2, TRUE, FALSE, FALSE, 0) : TILE_ATTR_FULL(sys_pal, TRUE, FALSE, FALSE, 0);
 	VDP_drawTextEx(BG_A, str, basetile, x, y, DMA);
 }
 void sys_drawTextBack(const char* str, u16 x, u16 y, u16 pal) {

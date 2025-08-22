@@ -11,27 +11,60 @@ typedef struct {
 	u16 currHp,currMp;
 	u16 hp,mp,atk,def,mag,spd;
 	// states
+	char states[MAX_STATES];
 	// skills
+	u8 skills[MAX_SKILLS];
 	// equip
+	// last picked option
+	u16 lastItemIdx;
+	u16 lastSkillIdx;
 } RPG_StateHero;
+typedef enum {
+	EBattlerAnim_IDLE,
+	EBattlerAnim_READY,
+	EBattlerAnim_DOWN,
+	EBattlerAnim_WEAK,
+	EBattlerAnim_MOVE,
+	EBattlerAnim_ATTACK,
+	EBattlerAnim_MAGIC,
+	EBattlerAnim_ITEM,
+	EBattlerAnim_VICTORY
+} EBattlerAnim;
+typedef enum {
+	EBattlerState_STUN,
+    EBattlerState_BURN,
+    EBattlerState_FROZEN,
+    EBattlerState_PROVOKE,
+    EBattlerState_EVASION,
+    EBattlerState_REGEN,
+} EBattlerState;
 typedef struct {
+	// visuals
 	char* name;
 	char battlerIdx;
 	bool hidden;
 	u16 x, y;
+	u16 baseX,baseY;
+	u16 targetX,targetY;
 	char sprIdx;
-	// 
+	// attributes
 	u16 currHp,currMp;
 	u16 hp,mp,atk,def,mag,spd; // Calculated value (only when needed)
 	u16 origHp,origMp,origAtk,origDef,origMag,origSpd; // original value. enemy=database, hero=state value
-	// states
+	// states turns
+	char states[MAX_STATES];
+	// action
+	char actionBasic; // 0:attack 1:skill 2:item 3:guard
+	char actionId; //b0:-- b1:skillId b2:itemId b3:--
+	char actionTargetScope; // 0:user 1:ally 2:allies 3:enemy 4:enemies
+	char actionTargetIdx;
 } RPG_StateBattler;
 
 typedef struct {
-	char* members[MAX_PARTY]; // 3
+	char members[MAX_PARTY]; // 3
 	int gold; // 4
-	u8* inventoryItemId[MAX_INVENTORY]; // 60
-	u8* inventoryItemQty[MAX_INVENTORY];// 60
+	u8 inventoryItemId[MAX_INVENTORY]; // 60
+	u8 inventoryItemQty[MAX_INVENTORY];// 60
 } RPG_StateParty; //3 + 4 + 120
 
 typedef struct {
@@ -84,18 +117,41 @@ void state_levelUpCharacter(u16 id) {
 	u16 a = random();
 	// 0123456789ABCDEF
 	// HHHHMMMMaaddmmss
-	u16 hpRand = (a & 0b1111000000000000) >> 12;
-	u16 mpRand = (a & 0b0000111100000000) >> 8;
-	u16 atkRand= (a & 0b0000000011000000) >> 6;
-	u16 defRand= (a & 0b0000000000110000) >> 4;
-	u16 magRand= (a & 0b0000000000001100) >> 2;
-	u16 spdRand= (a & 0b0000000000000011);
+	u16 hpRand = ((a & 0b1111000000000000) >> 12) >> 2;
+	u16 mpRand = ((a & 0b0000111100000000) >> 8) >> 2;
+	u16 atkRand= ((a & 0b0000000011000000) >> 6) >> 1;
+	u16 defRand= ((a & 0b0000000000110000) >> 4) >> 1;
+	u16 magRand= ((a & 0b0000000000001100) >> 2) >> 1;
+	u16 spdRand= ((a & 0b0000000000000011)) >> 1;
 	heroes[id].hp += DATA_HEROS[id].hpPlus + hpRand;
 	heroes[id].mp += DATA_HEROS[id].mpPlus + mpRand;
 	heroes[id].atk += DATA_HEROS[id].atkPlus + atkRand;
 	heroes[id].def += DATA_HEROS[id].defPlus + defRand;
 	heroes[id].mag += DATA_HEROS[id].magPlus + magRand;
 	heroes[id].spd += DATA_HEROS[id].spdPlus + spdRand;
+	// Learnings
+	for (int i = 0; i < DATA_HEROS[id].numLearnings; i++) {
+		u8 pos = i << 1;
+		u8 level = DATA_HEROS[id].learnings[pos];
+		if (level <= heroes[id].level) {
+			u8 skillId = DATA_HEROS[id].learnings[pos+1];
+			u8 _idx = 0;
+			while (_idx < MAX_SKILLS) {
+				// Already learned
+				if (heroes[id].skills[_idx] == skillId) {
+					_idx = 255;
+				} else {
+					// Slot is empty
+					if (heroes[id].skills[_idx] == 0) {
+						heroes[id].skills[_idx] = skillId;
+						_idx = 255;
+					} else {
+						_idx++;
+					}
+				}
+			}
+		}
+	}
 }
 void state_setupCharacter(u16 id, char avgLevel) {
 	u16 l = strlen(DATA_HEROS[id].name);
@@ -108,12 +164,24 @@ void state_setupCharacter(u16 id, char avgLevel) {
 	heroes[id].def = DATA_HEROS[id].def;
 	heroes[id].mag = DATA_HEROS[id].mag;
 	heroes[id].spd = DATA_HEROS[id].spd;
+	u8 _idx = 0;
+	while (_idx < MAX_STATES) {
+		heroes[id].states[_idx] = 0;
+		_idx++;
+	}
+	_idx = 0;
+	while (_idx < MAX_SKILLS) {
+		heroes[id].skills[_idx] = 0;
+		_idx++;
+	}
 	while (heroes[id].level < avgLevel) {
 		heroes[id].level += 1;
 		state_levelUpCharacter(id);
 	}
 	heroes[id].currHp = heroes[id].hp;
 	heroes[id].currMp = heroes[id].mp;
+	heroes[id].lastItemIdx = 0;
+	heroes[id].lastSkillIdx= 0;
 }
 void state_initCharacters() {
 	for (int i = 0; i < MAX_HEROS; i++) {
@@ -129,6 +197,15 @@ void state_initParty() {
 		party.inventoryItemId[i] = 0;
 		party.inventoryItemQty[i] = 0;
 	}
+	//
+	party.inventoryItemId[0] = 1;
+	party.inventoryItemQty[0] = 4;
+	party.inventoryItemId[1] = 2;
+	party.inventoryItemQty[1] = 2;
+	party.inventoryItemId[2] = 3;
+	party.inventoryItemQty[2] = 69;
+	party.inventoryItemId[3] = 4;
+	party.inventoryItemQty[3] = 18;
 }
 
 void state_init() {

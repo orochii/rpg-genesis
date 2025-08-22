@@ -11,6 +11,11 @@
 #define MAX_TROOP 6
 #define MAX_GOLD 999999
 #define MAX_INVENTORY 60
+#define MAX_SKILLS 128
+#define MAX_STATES 8
+
+#define INPUT_REPEAT_L 16
+#define INPUT_REPEAT_S 8
 
 #define EVP_CMP_NONE 0
 #define EVP_CMP_EQUAL 1

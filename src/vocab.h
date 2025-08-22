@@ -9,3 +9,10 @@ const char* DIALOGS[7] = {
     "&%h0%&", //
     "&%h1% and %h0%&", //
 };
+
+const char* VOCAB[4] = {
+    "Attack",
+    "Skill",
+    "Item",
+    "Guard",
+};
