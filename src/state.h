@@ -30,14 +30,7 @@ typedef enum {
 	EBattlerAnim_ITEM,
 	EBattlerAnim_VICTORY
 } EBattlerAnim;
-typedef enum {
-	EBattlerState_STUN,
-    EBattlerState_BURN,
-    EBattlerState_FROZEN,
-    EBattlerState_PROVOKE,
-    EBattlerState_EVASION,
-    EBattlerState_REGEN,
-} EBattlerState;
+
 typedef struct {
 	// visuals
 	char* name;
@@ -118,7 +111,7 @@ void state_levelUpCharacter(u16 id) {
 	// 0123456789ABCDEF
 	// HHHHMMMMaaddmmss
 	u16 hpRand = ((a & 0b1111000000000000) >> 12) >> 2;
-	u16 mpRand = ((a & 0b0000111100000000) >> 8) >> 2;
+	u16 mpRand = ((a & 0b0000111100000000) >> 8) != 0;
 	u16 atkRand= ((a & 0b0000000011000000) >> 6) >> 1;
 	u16 defRand= ((a & 0b0000000000110000) >> 4) >> 1;
 	u16 magRand= ((a & 0b0000000000001100) >> 2) >> 1;

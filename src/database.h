@@ -1,6 +1,25 @@
 #pragma once
 #include <resources.h>
 
+typedef enum {
+	EBattlerState_STUN,
+    EBattlerState_BURN,
+    EBattlerState_FROZEN,
+    EBattlerState_PROVOKE,
+    EBattlerState_EVASION,
+    EBattlerState_REGEN,
+	EBattlerState_CONFUSE,
+	EBattlerState_BERSERK
+} EBattlerState;
+typedef enum {
+	EActionScope_USER,
+	EActionScope_ALLY,
+	EActionScope_ALLIES,
+	EActionScope_ENEMY,
+	EActionScope_ENEMIES,
+	EActionScope_EVERYONE
+} EActionScope;
+
 typedef struct {
 	u16 characterIdx;
 	u16 characterIdxWmap;
@@ -20,10 +39,13 @@ typedef struct {
 typedef struct {
 	const char* name;
 	const char* desc;
+	// use conditions
 	bool canUseInBattle;
 	bool canUseInMenu;
 	u16 mpCost;
+	u8 priority;
 	// effect
+	u8 scope;
 	u16 effectId; //0:physDmg(base,mult) 1:magicDmg(base,mult) 2:percDmg(perc,useMax)
 	u16 effectParam1;
 	u16 effectParam2;
@@ -31,47 +53,51 @@ typedef struct {
 	u16 visualsIdx;
 } RPG_DataSkill;
 const RPG_DataSkill DATA_SKILLS[26] = {
+	// NAME			DESCRIPTION					BATT MENU  
 	// Basic
-	{ "Attack", 	"Deals basic damage.",	true,false,0,	0,1,10,	0}, //1
-	{ "Guard", 		"Halves incoming damage.",	true,false,0,	0,0,0,	0}, //2
+	{ "Attack", 	"Deals basic damage.",		true,false,0,0,	EActionScope_ENEMY,0,1,10,		0}, //1
+	{ "Guard", 		"Halves incoming damage.",	true,false,0,0,	EActionScope_USER,0,0,0,		0}, //2
 	// SKILLS
-	{ "Critical", 	"Boosted basic attack.",	true,false,1,	0,1,12,	0}, //3
-	{ "Tackle", 	"Basic hit, adds STUN.",	true,false,1,	0,1,7,	0}, //4
-	{ "Provoke", 	"Gets foes attention.",	true,false,1,	0,0,0,	0}, //5
-	{ "Laser", 		"Piercing magic damage.",	true,false,2,	1,12,10,	0}, //6
+	{ "Critical", 	"Boosted basic attack.",	true,false,1,0,	EActionScope_ENEMY,0,1,12,		0}, //3
+	{ "Tackle", 	"Basic hit, adds STUN.",	true,false,1,0,	EActionScope_ENEMY,0,1,7,		0}, //4
+	{ "Provoke", 	"Gets foes attention.",		true,false,1,0,	EActionScope_USER,0,0,0,		0}, //5
+	{ "Laser", 		"Piercing magic damage.",	true,false,2,0,	EActionScope_ENEMY,1,12,10,		0}, //6
 	// FIRE MAGIC
-	{ "Fire", 		"Basic fire damage.",	true,false,2,	1,24,10,	0}, //7
-	{ "Flame", 		"Fire damage to all.",	true,false,4,	1,24,10,	0}, //8
-	{ "Inferno", 	"Strong fire damage.",	true,false,6,	1,24,10,	0}, //9
-	{ "Burn", 		"Causes BURN.",			true,false,3,	1,24,10,	0}, //10
+	{ "Fire", 		"Basic fire damage.",		true,false,2,0,	EActionScope_ENEMY,1,24,10,		0}, //7
+	{ "Flame", 		"Fire damage to all.",		true,false,4,0,	EActionScope_ENEMIES,1,24,10,	0}, //8
+	{ "Inferno", 	"Strong fire damage.",		true,false,6,0,	EActionScope_ENEMY,1,24,10,		0}, //9
+	{ "Burn", 		"Causes BURN.",				true,false,3,0,	EActionScope_ENEMY,1,24,10,		0}, //10
 	// WATER MAGIC
-	{ "Ice", 		"Basic water damage.",	true,false,2,	1,24,10,	0}, //11
-	{ "Winter", 	"Water damage to all.",	true,false,4,	1,24,10,	0}, //12
-	{ "Blizzard", 	"Strong water damage.",	true,false,6,	1,24,10,	0}, //13
-	{ "Freeze", 	"Causes FROZEN.",		true,false,3,	1,24,10,	0}, //14
+	{ "Ice", 		"Basic water damage.",		true,false,2,0,	EActionScope_ENEMY,1,24,10,		0}, //11
+	{ "Winter", 	"Water damage to all.",		true,false,4,0,	EActionScope_ENEMIES,1,24,10,	0}, //12
+	{ "Blizzard", 	"Strong water damage.",		true,false,6,0,	EActionScope_ENEMY,1,24,10,		0}, //13
+	{ "Freeze", 	"Causes FROZEN.",			true,false,3,0,	EActionScope_ENEMY,1,24,10,		0}, //14
 	// WIND MAGIC
-	{ "Windcut", 	"Basic wind damage.",	true,false,2,	1,24,10,	0}, //15
-	{ "Storm", 		"Wind damage to all.",	true,false,4,	1,24,10,	0}, //16
-	{ "Thunder", 	"Strong wind damage.",	true,false,6,	1,24,10,	0}, //17
-	{ "Evasion", 	"Causes EVASION.",		true,false,3,	1,24,10,	0}, //18
+	{ "Windcut", 	"Basic wind damage.",		true,false,2,0,	EActionScope_ENEMY,1,24,10,		0}, //15
+	{ "Storm", 		"Wind damage to all.",		true,false,4,0,	EActionScope_ENEMIES,1,24,10,	0}, //16
+	{ "Thunder", 	"Strong wind damage.",		true,false,6,0,	EActionScope_ENEMY,1,24,10,		0}, //17
+	{ "Evasion", 	"Causes EVASION.",			true,false,3,0,	EActionScope_ALLY,1,24,10,		0}, //18
 	// HOLY MAGIC
-	{ "Heal", 		"Heals some HP.",		true,false,2,	1,24,10,	0}, //19
-	{ "Regen", 		"Heals 1/16HP per turn.",	true,false,5,	1,24,10,	0}, //20
-	{ "Remedy", 	"Cures BURN and FROZEN.",	true,false,3,	1,24,10,	0}, //21
-	{ "Revive", 	"Cures KO.",			true,false,5,	1,24,10,	0}, //22
+	{ "Heal", 		"Heals some HP.",			true,true,2,0,	EActionScope_ALLY,1,24,10,		0}, //19
+	{ "Regen", 		"Heals 1/16HP per turn.",	true,false,5,0,	EActionScope_ALLIES,1,24,10,	0}, //20
+	{ "Remedy", 	"Cures BURN and FROZEN.",	true,true,3,0,	EActionScope_ALLY,1,24,10,		0}, //21
+	{ "Revive", 	"Cures KO.",				true,true,5,0,	EActionScope_ALLY,1,24,10,		0}, //22
 	// STATUS MAGIC (?)
-	{ "Strong", 	"Powers up ATK.",		true,false,6,	1,24,10,	0}, //23
-	{ "Durable", 	"Powers up DEF.",		true,false,6,	1,24,10,	0}, //24
-	{ "Sage", 		"Powers up MAG.",		true,false,6,	1,24,10,	0}, //25
-	{ "Swift", 		"Powers up SPD.",		true,false,6,	1,24,10,	0}, //26
+	{ "Strong", 	"Powers up ATK.",			true,false,6,0,	EActionScope_ALLY,1,24,10,		0}, //23
+	{ "Durable", 	"Powers up DEF.",			true,false,6,0,	EActionScope_ALLY,1,24,10,		0}, //24
+	{ "Sage", 		"Powers up MAG.",			true,false,6,0,	EActionScope_ALLY,1,24,10,		0}, //25
+	{ "Swift", 		"Powers up SPD.",			true,false,6,0,	EActionScope_ALLY,1,24,10,		0}, //26
 };
 typedef struct {
 	const char* name;
 	const char* desc;
+	// use condition
 	bool canUseInBattle;
 	bool canUseInMenu;
 	bool consumeWhenUsed;
+	u8 priority;
 	// effect
+	u8 scope;
 	u16 effectId; //0:physDmg(base,mult) 1:magicDmg(base,mult) 2:percDmg(perc,useMax)
 	u16 effectParam1;
 	u16 effectParam2;
@@ -79,10 +105,10 @@ typedef struct {
 	u16 visualsIdx;
 } RPG_DataItem;
 const RPG_DataItem DATA_ITEMS[4] = {
-	{ "Potion","Recover 30% HP." 	,true,true,true, 2,30,1, 0 },
-	{ "HiPotion","Recover 60% HP." 	,true,true,true, 2,60,1, 0 },
-	{ "Elixir","Full recovery."		,true,true,true, 2,100,1, 0 },
-	{ "Reviver","Cures KO." 		,true,true,true, 2,0,1, 0 },
+	{ "Potion","Recover 30% HP." 	,true,true,true,0,	EActionScope_ALLY,2,30,1, 	0 },
+	{ "HiPotion","Recover 60% HP." 	,true,true,true,0,	EActionScope_ALLY,2,60,1, 	0 },
+	{ "Elixir","Full recovery."		,true,true,true,0,	EActionScope_ALLY,2,100,1, 	0 },
+	{ "Reviver","Cures KO." 		,true,true,true,0,	EActionScope_ALLY,2,0,1, 	0 },
 };
 typedef struct {
 	char condition;

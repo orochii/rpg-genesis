@@ -11,7 +11,7 @@ PALETTE pa_system "system.png"
 SPRITE char1 "char/char1.png" 2 4 FAST 0
 SPRITE char1_wmap "char/char1_wmap.png" 1 2 FAST 0
 SPRITE char1_face "char/char1_face.png" 6 6 FAST 4
-SPRITE char1_battler "battler/char1.png" 5 5 FAST 4
+SPRITE char1_battler "battler/char1.png" 5 5 FAST 6
 
 SPRITE char2_battler "battler/char2.png" 3 4 FAST 8
 
