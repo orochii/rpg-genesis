@@ -36,9 +36,10 @@ typedef struct {
 	char* name;
 	char battlerIdx;
 	bool hidden;
+	bool isEnemy;
 	u16 x, y;
 	u16 baseX,baseY;
-	u16 targetX,targetY;
+	u16 targetX,targetY,moveDuration;
 	char sprIdx;
 	// attributes
 	u16 currHp,currMp;
@@ -51,6 +52,8 @@ typedef struct {
 	char actionId; //b0:-- b1:skillId b2:itemId b3:--
 	char actionTargetScope; // 0:user 1:ally 2:allies 3:enemy 4:enemies
 	char actionTargetIdx;
+	s16 actionSpeed;
+	u8 boosts;
 } RPG_StateBattler;
 
 typedef struct {

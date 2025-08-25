@@ -181,9 +181,10 @@ const RPG_DataEnemy DATA_ENEMIES[1] = {
 	//b				hp mp  a d m s
 	{ 3, "Worm", 	30, 5, 6,3,1,4 },
 };
-const u16 DATA_FORMATION1[4] = {
-	1, //size
-	0, 80, 160, //id, x, y
+const u16 DATA_FORMATION1[7] = {
+	2, //size
+	0, 80, 120, //id, x, y
+	0, 80, 192, //id, x, y
 };
 const u16* DATA_FORMATIONS[1] = {
 	&DATA_FORMATION1,

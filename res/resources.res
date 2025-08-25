@@ -23,6 +23,7 @@ SPRITE worm_battler "battler/worm.png" 11 8 FAST 0
 
 SPRITE battle_selector "battle_sel.png" 3 1 FAST 0
 SPRITE target_selector "target_sel.png" 2 2 FAST 8
+SPRITE boost_orb "boost_orb.png" 1 1 FAST 8
 
 TILESET ts_world "tileset/world.png" BEST ALL
 MAP tm_world "map/world.png" ts_world BEST ALL

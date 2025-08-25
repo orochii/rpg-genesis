@@ -7,6 +7,15 @@
 2: round end
 4: battle end
 */
+#define MAX_BOOSTS 3
+#define BOOST_COST 3
+#define ORB_RADIUS_X 16
+#define ORB_RADIUS_Y 8
+#define ORB_OX 4
+#define ORB_OY 20
+#define BATTLER_MOVETOTARGET_FRAMES 24
+#define BATTLER_MOVETOHOME_FRAMES 24
+
 int scenebattle_phase = 0;
 int scenebattle_step = 0;
 int scenebattle_idx = 0;
@@ -18,6 +27,7 @@ int scenebattle_waitCount = 0;
 int scenebattle_sx = 0;
 int scenebattle_sy = 0;
 bool scenebattle_itemMode = 0;
+bool scenebattle_scheduleRedrawWindow = false;
 int scenebattle_itemIdx = 0;
 int scenebattle_itemTopRow = 0;
 int scenebattle_skillIdx = 0;
@@ -27,9 +37,13 @@ RPG_StateBattler scenebattle_enemies[MAX_TROOP];
 Image* scenebattle_battleback;
 Sprite* scenebattle_selectorSprite;
 Sprite* scenebattle_targetSelectorSprite;
+Sprite* scenebattle_orbSprites[MAX_PARTY*MAX_BOOSTS];
+u16 scenebattle_orbState;
 u8* scenebattle_cachedTargets[MAX_TROOP];
 u8 scenebattle_numCachedTargets;
 u8 scenebattle_cachedTargetIdx;
+RPG_StateBattler* scenebattle_turnOrder[MAX_PARTY+MAX_TROOP];
+u8 scenebattle_turnOrderCount;
 
 bool battler_canMove(RPG_StateBattler* battler) {
     if (battler->hp <= 0) return false;
@@ -61,10 +75,91 @@ void battler_resetAnimation(RPG_StateBattler* battler) {
     //
     battler_setAnimation(battler, anim, true);
 }
+void battler_moveTo(RPG_StateBattler* battler, u16 x, u16 y, u16 d) {
+    battler->targetX = x;
+    battler->targetY = y;
+    battler->moveDuration = d;
+}
+void battler_moveToTarget(RPG_StateBattler* battler) {
+    switch (battler->actionTargetScope) {
+        case EActionScope_ALLY:
+            battler->targetX = scenebattle_actors[battler->actionTargetIdx].x - 32;
+            battler->targetY = scenebattle_actors[battler->actionTargetIdx].y;
+            battler->moveDuration = BATTLER_MOVETOTARGET_FRAMES;
+            break;
+        case EActionScope_ENEMY:
+            battler->targetX = scenebattle_enemies[battler->actionTargetIdx].x + 32;
+            battler->targetY = scenebattle_enemies[battler->actionTargetIdx].y;
+            battler->moveDuration = BATTLER_MOVETOTARGET_FRAMES;
+            break;
+    }
+}
+void battler_moveToHome(RPG_StateBattler* battler) {
+    battler->targetX = battler->baseX;
+    battler->targetY = battler->baseY;
+    battler->moveDuration = BATTLER_MOVETOHOME_FRAMES;
+}
+void battler_updateMove(RPG_StateBattler* battler) {
+    if (battler->x != battler->targetX || battler->y != battler->targetY) {
+        if (battler->moveDuration < 1) return;
+        battler->x = (battler->x * (battler->moveDuration - 1) + battler->targetX) / battler->moveDuration;
+        battler->y = (battler->y * (battler->moveDuration - 1) + battler->targetY) / battler->moveDuration;
+        battler->moveDuration = battler->moveDuration - 1;
+        Sprite* spr = mapSprites[battler->sprIdx];
+        u16 x = battler->x - (spr->definition->w >>1);
+        u16 y = battler->y - spr->definition->h;
+        SPR_setPosition(spr, x, y);
+    }
+}
 void battler_setDepth(RPG_StateBattler* battler) {
     Sprite* spr = mapSprites[battler->sprIdx];
-    s16 depth = -(battler->y >> 3);
-    //SPR_setDepth(spr, depth);
+    s16 depth = -320 - (battler->y >> 2);
+    SPR_setDepth(spr, depth);
+}
+void battler_setBoostCount(u8 idx, u8 c) {
+    u16 x = scenebattle_actors[idx].x - ORB_OX;
+    u16 y = scenebattle_actors[idx].y - ORB_OY;
+    u8 si = idx*MAX_BOOSTS;
+    for (u8 i=0; i < MAX_BOOSTS; i++) {
+        if (i < c) {
+            u16 xx = x + (i * 8);
+            u16 yy = y;
+            // Create
+            if (scenebattle_orbSprites[si+i] == NULL) {
+                scenebattle_orbSprites[si+i] = SPR_addSprite(&boost_orb, xx, yy, TILE_ATTR(PAL2,0,0,0));
+                SPR_setDepth(scenebattle_orbSprites[si+i], -idx-0x1000);
+            }
+        } else {
+            // Clean
+            if (scenebattle_orbSprites[si+i] != NULL) {
+                SPR_releaseSprite(scenebattle_orbSprites[si+i]);
+                scenebattle_orbSprites[si+i] = NULL;
+            }
+        }
+    }
+}
+void battler_updateBoostSprites(int idx) {
+    u16 x = scenebattle_actors[idx].x - ORB_OX;
+    u16 y = scenebattle_actors[idx].y - ORB_OY;
+    u8 si = idx*MAX_BOOSTS;
+    for (u8 i=0; i < MAX_BOOSTS; i++) {
+        if (scenebattle_orbSprites[si+i] != NULL) {
+            s16 angle = scenebattle_orbState - (i * 80);
+            while (angle < 0) angle += 360;
+            fix16 a = FIX16(angle);
+            fix16 c = F16_mul(F16_cos(a), FIX16(ORB_RADIUS_X));
+            fix16 s = F16_mul(F16_sin(a), FIX16(ORB_RADIUS_Y));
+            u16 xx = x + F16_toInt(c);
+            u16 yy = y + F16_toInt(s);
+            u16 cx = SPR_getPositionX(scenebattle_orbSprites[si+i]);
+            u16 cy = SPR_getPositionY(scenebattle_orbSprites[si+i]);
+            u16 px = (xx+cx)>>1;
+            u16 py = (yy+cy)>>1;
+            SPR_setPosition(scenebattle_orbSprites[si+i], px, py);
+            s16 depth = -320 - ((scenebattle_actors[idx].y+F16_toInt(s)) >> 2);
+            SPR_setDepth(scenebattle_orbSprites[si+i], depth);
+        }
+    }
 }
 
 void scenebattle_recalcStats(RPG_StateBattler* battler) {
@@ -91,6 +186,10 @@ void scenebattle_initBattle() {
     scenebattle_itemTopRow = 0;
     scenebattle_skillTopRow = 0;
     scenebattle_skillIdx = 0;
+    scenebattle_scheduleRedrawWindow = false;
+    for(int i = 0; i < MAX_PARTY*MAX_BOOSTS; i++) {
+        scenebattle_orbSprites[i] = NULL;
+    }
 }
 void scenebattle_initEnemy() {
     u16* formation = DATA_FORMATIONS[0];
@@ -103,6 +202,7 @@ void scenebattle_initEnemy() {
             u16 y = formation[j+3];
             // Get display
             scenebattle_enemies[i].hidden = false;
+            scenebattle_enemies[i].isEnemy = true;
             scenebattle_enemies[i].name = DATA_ENEMIES[id].name;
             scenebattle_enemies[i].battlerIdx = DATA_ENEMIES[id].battlerIdx;
             scenebattle_enemies[i].x = x;
@@ -123,6 +223,7 @@ void scenebattle_initEnemy() {
             // Get current state
             scenebattle_enemies[i].currHp = scenebattle_enemies[i].hp;
             scenebattle_enemies[i].currMp = scenebattle_enemies[i].mp;
+            scenebattle_enemies[i].boosts = 0;
         } else {
             scenebattle_enemies[i].hidden = true;
         }
@@ -142,6 +243,7 @@ void scenebattle_initParty() {
             u16 y = 112 + 24 * i;
             // Get display
             scenebattle_actors[i].hidden = false;
+            scenebattle_actors[i].isEnemy = false;
             scenebattle_actors[i].name = heroes[id].name;
             scenebattle_actors[i].battlerIdx = DATA_HEROS[id].battlerIdx;
             scenebattle_actors[i].x = x;
@@ -160,6 +262,7 @@ void scenebattle_initParty() {
             // Get current state
             scenebattle_actors[i].currHp = heroes[id].currHp;
             scenebattle_actors[i].currMp = heroes[id].currMp;
+            scenebattle_actors[i].boosts = 0;
             // Recalc stats
             scenebattle_recalcStats(&scenebattle_actors[i]);
         }
@@ -320,18 +423,31 @@ void scenebattle_moveActorSelector(int idx) {
     u16 y = actor->y - (scenebattle_selectorSprite->definition->h / 2);
     SPR_setPosition(scenebattle_selectorSprite, x, y);
 }
-void scenebattle_drawActionWindow() {
-    VDP_clearPlane(BG_A, true);
-    // Draw top window
+void scenebattle_drawMPWindow() {
     sys_drawWindow(25,1,14,3,TILE_USER_INDEX);
+    sys_drawText("{", 26,2, false);
     sys_drawText("MP", 27,2, true);
     RPG_StateBattler* actor = &scenebattle_actors[scenebattle_idx];
     char* str[10];
-    sprintf(str, "%3d/%3d", actor->currMp, actor->mp);
+    sprintf(str, "%3d/%3d}", actor->currMp, actor->mp);
     sys_drawText(str, 30,2, false);
-    // Draw action window
+}
+void scenebattle_drawSelectedActionWindow(char* name) {
+    VDP_clearTileMapRect(BG_A, 25,4, 10,6);
+    sys_drawWindow(25,4,10,4,TILE_USER_INDEX);
+    sys_drawText(VOCAB[scenebattle_actionSelIdx], 26,5, true);
+    sys_drawText(name, 26, 6, false);
+}
+void scenebattle_drawActionSelWindow() {
     sys_drawWindow(25,4,10,6,TILE_USER_INDEX);
     sys_drawOptions(VOCAB,4,26,5,scenebattle_actionSelIdx);
+}
+void scenebattle_drawActionWindow() {
+    VDP_clearPlane(BG_A, true);
+    // Draw top window
+    scenebattle_drawMPWindow();
+    // Draw action window
+    scenebattle_drawActionSelWindow();
 }
 void scenebattle_drawSkillWindow() {
     char id = party.members[scenebattle_idx];
@@ -364,6 +480,8 @@ void scenebattle_createTargetSelector(u8 scope) {
         case EActionScope_ENEMY:
             x = scenebattle_enemies[idx].x;
             y = scenebattle_enemies[idx].y - 16;
+            scenebattle_clearAuxWindow();
+            sys_drawText(scenebattle_enemies[idx].name, x>>3, (y>>3)+2, false);
             break;
     }
     //y = y - target_selector.h;
@@ -384,13 +502,90 @@ void scenebattle_moveTargetSelector() {
         case EActionScope_ENEMY:
             x = scenebattle_enemies[idx].x;
             y = scenebattle_enemies[idx].y - 16;
+            scenebattle_clearAuxWindow();
+            sys_drawText(scenebattle_enemies[idx].name, x>>3, (y>>3)+2, false);
             break;
     }
     SPR_setPosition(scenebattle_targetSelectorSprite, x, y);
 }
 void scenebattle_destroyTargetSelector() {
+    scenebattle_clearAuxWindow();
     SPR_releaseSprite(scenebattle_targetSelectorSprite);
     scenebattle_targetSelectorSprite = NULL;
+}
+void scenebattle_cacheTargets(u8 scope, bool invert) {
+    if (invert) {
+        switch(scope) {
+            case EActionScope_ALLY: scope=EActionScope_ENEMY;break;
+            case EActionScope_ENEMY: scope=EActionScope_ALLY;break;
+        }
+    }
+    switch(scope) {
+        case EActionScope_USER:
+            scenebattle_cachedTargets[0] = scenebattle_idx;
+            scenebattle_numCachedTargets = 1;
+            break;
+        case EActionScope_ALLY:
+            scenebattle_numCachedTargets = scenebattle_getHeroTargets(false);
+            break;
+        case EActionScope_ENEMY:
+            scenebattle_numCachedTargets = scenebattle_getEnemyTargets(false);
+            break;
+        default:
+            scenebattle_numCachedTargets = 0;
+            break;
+    }
+}
+void scenebattle_drawActionName(RPG_StateBattler* battler) {
+    char* actionName = VOCAB[battler->actionBasic];
+    switch (battler->actionBasic) {
+        case 1: //skill
+            actionName = DATA_SKILLS[battler->actionId-1].name;
+            break;
+        case 2: //item
+            actionName = DATA_ITEMS[battler->actionId-1].name;
+            break;
+    }
+    //VDP_clearPlane(BG_A, true);
+    u16 x = battler->isEnemy ? 1 : 25;
+    sys_drawWindow(x,1,10,3,TILE_USER_INDEX);
+    sys_drawText(actionName, x+1, 2, false);
+}
+void scenebattle_eraseActionName(RPG_StateBattler* battler) {
+    u16 x = battler->isEnemy ? 1 : 25;
+    VDP_clearTileMapRect(BG_A, x, 1, 10,3);
+}
+void scenebattle_sortActionOrder() {
+    for (int curr = 1; curr < scenebattle_turnOrderCount; curr++) {
+        s16 i = curr;
+        s16 j = i-1;
+        while(i>0 && scenebattle_turnOrder[i]->actionSpeed < scenebattle_turnOrder[j]->actionSpeed) {
+            RPG_StateBattler* a = scenebattle_turnOrder[j];
+            scenebattle_turnOrder[j] = scenebattle_turnOrder[i];
+            scenebattle_turnOrder[i] = a;
+            i--;
+            j--;
+        }
+    }
+}
+void scenebattle_makeActionOrder() {
+    scenebattle_turnOrderCount = 0;
+    // Add all existing actors
+    for (int i = 0; i < MAX_PARTY; i++) {
+        RPG_StateBattler* actor = &scenebattle_actors[i];
+        if (actor->hidden) continue;
+        scenebattle_turnOrder[scenebattle_turnOrderCount] = actor;
+        scenebattle_turnOrderCount += 1;
+    }
+    // Add all existing enemies
+    for (int i = 0; i < MAX_TROOP; i++) {
+        RPG_StateBattler* enemy = &scenebattle_enemies[i];
+        if (enemy->hidden) continue;
+        scenebattle_turnOrder[scenebattle_turnOrderCount] = enemy;
+        scenebattle_turnOrderCount += 1;
+    }
+    // Order by actionSpeed
+    scenebattle_sortActionOrder();
 }
 void scenebattle_commitSkillIdx() {
     unsigned char id = party.members[scenebattle_idx];
@@ -402,24 +597,12 @@ void scenebattle_commitSkillIdx() {
     scenebattle_actors[scenebattle_idx].actionId = skillId;
     scenebattle_actors[scenebattle_idx].actionTargetScope = scope;
     scenebattle_actors[scenebattle_idx].actionTargetIdx = 0;
+    scenebattle_actors[scenebattle_idx].actionSpeed = scenebattle_actors[scenebattle_idx].spd + DATA_SKILLS[skillId-1].priority;
     scenebattle_cachedTargetIdx = 0;
     //
-    switch(scope) {
-        case EActionScope_USER:
-            scenebattle_cachedTargets[0] = scenebattle_idx;
-            scenebattle_numCachedTargets = 1;
-            break;
-        case EActionScope_ALLY:
-            scenebattle_numCachedTargets = scenebattle_getHeroTargets(false);
-            break;
-        case EActionScope_ENEMY:
-            scenebattle_numCachedTargets = scenebattle_getEnemyTargets(false);
-            break;
-        default:
-            scenebattle_numCachedTargets = 0;
-            break;
-    }
+    scenebattle_cacheTargets(scope,false);
     scenebattle_createTargetSelector(scope);
+    scenebattle_drawSelectedActionWindow(DATA_SKILLS[skillId-1].name);
 }
 void scenebattle_commitItemIdx() {
     unsigned char id = party.members[scenebattle_idx];
@@ -430,24 +613,12 @@ void scenebattle_commitItemIdx() {
     scenebattle_actors[scenebattle_idx].actionId = itemId;
     scenebattle_actors[scenebattle_idx].actionTargetScope = scope;
     scenebattle_actors[scenebattle_idx].actionTargetIdx = 0;
+    scenebattle_actors[scenebattle_idx].actionSpeed = scenebattle_actors[scenebattle_idx].spd + DATA_ITEMS[itemId-1].priority;
     scenebattle_cachedTargetIdx = 0;
     //
-    switch(scope) {
-        case EActionScope_USER:
-            scenebattle_cachedTargets[0] = scenebattle_idx;
-            scenebattle_numCachedTargets = 1;
-            break;
-        case EActionScope_ALLY:
-            scenebattle_numCachedTargets = scenebattle_getHeroTargets(false);
-            break;
-        case EActionScope_ENEMY:
-            scenebattle_numCachedTargets = scenebattle_getEnemyTargets(false);
-            break;
-        default:
-            scenebattle_numCachedTargets = 0;
-            break;
-    }
+    scenebattle_cacheTargets(scope,false);
     scenebattle_createTargetSelector(scope);
+    scenebattle_drawSelectedActionWindow(DATA_ITEMS[itemId-1].name);
 }
 void scenebattle_resetIdxAndRow() {
     unsigned char id = party.members[scenebattle_idx];
@@ -466,11 +637,14 @@ void scenebattle_gotoPreviousActor() {
         scenebattle_idx--;
         RPG_StateBattler* actor = &scenebattle_actors[scenebattle_idx];
         if (actor->hidden == false && battler_canInput(actor)) {
-            scenebattle_drawActionWindow();
+            VDP_clearPlane(BG_A, true);
+            scenebattle_scheduleRedrawWindow = true;
+            scenebattle_waitCount = 16;
             scenebattle_moveActorSelector(scenebattle_idx);
             foundNext = true;
         }
     }
+    scenebattle_cachedTargetIdx = 0;
 }
 void scenebattle_gotoNextActor() {
     bool foundNext = false;
@@ -479,24 +653,24 @@ void scenebattle_gotoNextActor() {
         if (actor->hidden == false) {
             if (battler_canInput(actor)) {
                 if (scenebattle_selectorSprite != 0) {
-                    scenebattle_drawActionWindow();
+                    VDP_clearPlane(BG_A, true);
+                    scenebattle_scheduleRedrawWindow = true;
+                    scenebattle_waitCount = 16;
                     scenebattle_moveActorSelector(scenebattle_idx);
                 }
                 foundNext = true;
             } else if (battler_canMove(actor)) {
-                //todo: confuse/berserk
                 actor->actionBasic = 0;
                 actor->actionId = 0;
                 actor->actionTargetIdx = 0;
                 actor->actionTargetScope = EActionScope_USER;
                 if (actor->states[EBattlerState_BERSERK] != 0) {
-                    //get random enemy target
-                    scenebattle_getRandomEnemyTarget(false);
-                    //set scope
                     actor->actionTargetScope = EActionScope_ENEMY;
+                    actor->actionTargetIdx = scenebattle_getRandomEnemyTarget(false);
                 }
                 if (actor->states[EBattlerState_CONFUSE] != 0) {
                     actor->actionTargetScope = EActionScope_ALLY;
+                    actor->actionTargetIdx = scenebattle_getRandomHeroTarget(false);
                 }
             } else {
                 actor->actionBasic = 4; //wait
@@ -515,17 +689,60 @@ void scenebattle_gotoNextActor() {
         VDP_clearPlane(BG_A, true);
         scenebattle_phase = 1;
         scenebattle_step = 0;
+        scenebattle_makeActionOrder();
+    }
+    scenebattle_cachedTargetIdx = 0;
+}
+void scenebattle_makeEnemyActions() {
+    //
+    for (int i=0; i<MAX_TROOP; i++) {
+        RPG_StateBattler* enemy = &scenebattle_enemies[i];
+        if (enemy->hidden) continue;
+        if (battler_canMove(enemy) == false) {
+            enemy->actionBasic = 4; //wait
+            enemy->actionId = 0;
+            enemy->actionTargetScope = 0;
+            enemy->actionTargetIdx = 0;
+            enemy->actionSpeed = enemy->spd - 100;
+        } else if (battler_canInput(enemy) == false) {
+            enemy->actionBasic = 0;
+            enemy->actionId = 0;
+            enemy->actionTargetIdx = 0;
+            enemy->actionTargetScope = EActionScope_USER;
+            enemy->actionSpeed = enemy->spd;
+            if (enemy->states[EBattlerState_BERSERK] != 0) {
+                enemy->actionTargetScope = EActionScope_ALLY;
+                enemy->actionTargetIdx = scenebattle_getRandomHeroTarget(false);
+            }
+            if (enemy->states[EBattlerState_CONFUSE] != 0) {
+                enemy->actionTargetScope = EActionScope_ENEMY;
+                enemy->actionTargetIdx = scenebattle_getRandomEnemyTarget(false);
+            }
+        }else {
+            // TODO: Follow script... for now jusk... vicious mockery.
+            enemy->actionBasic = 0;
+            enemy->actionId = 0;
+            enemy->actionTargetScope = EActionScope_ALLY;
+            enemy->actionTargetIdx = scenebattle_getRandomHeroTarget(false);
+            enemy->actionSpeed = enemy->spd;
+        }
     }
 }
 
 void scenebattle_updatePhase0ActionSelect() { //action select
+    if (scenebattle_scheduleRedrawWindow) {
+        scenebattle_drawActionWindow();
+        scenebattle_scheduleRedrawWindow = false;
+    }
     RPG_StateBattler* actor = &scenebattle_actors[scenebattle_idx];
     switch(scenebattle_step) {
         case 0: // Setup
             switch (scenebattle_substep) {
                 case 0:
                     // On start, select actions for enemy
+                    scenebattle_makeEnemyActions();
                     // Setup player
+                    scenebattle_idx = 0;
                     scenebattle_gotoNextActor();
                     scenebattle_waitCount = 8;
                     break;
@@ -553,6 +770,23 @@ void scenebattle_updatePhase0ActionSelect() { //action select
                 if (scenebattle_actionSelIdx > 3) scenebattle_actionSelIdx = 0;
                 sys_drawOptions(VOCAB,4,26,5,scenebattle_actionSelIdx);
             }
+            //
+            if (input_trigger(BUTTON_LEFT)) {
+                if (actor->boosts > 0) {
+                    actor->boosts = actor->boosts - 1;
+                    actor->currMp = actor->currMp + BOOST_COST;
+                    battler_setBoostCount(scenebattle_idx, actor->boosts);
+                    scenebattle_drawMPWindow();
+                }
+            } else if (input_trigger(BUTTON_RIGHT)) {
+                if (actor->boosts < MAX_BOOSTS && actor->currMp >= BOOST_COST) {
+                    actor->boosts = actor->boosts + 1;
+                    actor->currMp = actor->currMp - BOOST_COST;
+                    battler_setBoostCount(scenebattle_idx, actor->boosts);
+                    scenebattle_drawMPWindow();
+                }
+            }
+            //
             if (input_trigger(BUTTON_A)) {
                 switch (scenebattle_actionSelIdx) {
                     case 0: //attack
@@ -560,7 +794,10 @@ void scenebattle_updatePhase0ActionSelect() { //action select
                         actor->actionId = 0;
                         actor->actionTargetScope = EActionScope_ENEMY;
                         actor->actionTargetIdx = 0;
+                        actor->actionSpeed = actor->spd;
+                        scenebattle_cacheTargets(actor->actionTargetScope, false);
                         scenebattle_createTargetSelector(actor->actionTargetScope);
+                        scenebattle_drawSelectedActionWindow("");
                         scenebattle_step = 3;
                         break;
                     case 1: //skill
@@ -580,9 +817,12 @@ void scenebattle_updatePhase0ActionSelect() { //action select
                         actor->actionId = 0;
                         actor->actionTargetScope = 0;
                         actor->actionTargetIdx = 0;
+                        actor->actionSpeed = actor->spd + 1000;
                         scenebattle_idx++;
                         battler_setAnimation(actor, EBattlerAnim_READY, false);
+                        scenebattle_step = 1;
                         scenebattle_gotoNextActor();
+                        scenebattle_substep = 0;
                         break;
                 }
             } else if (input_trigger(BUTTON_B)) {
@@ -590,6 +830,7 @@ void scenebattle_updatePhase0ActionSelect() { //action select
                 scenebattle_resetIdxAndRow();
                 RPG_StateBattler* prevActor = &scenebattle_actors[scenebattle_idx];
                 battler_resetAnimation(prevActor);
+                scenebattle_step = 1;
             }
             break;
         case 2: // Object select
@@ -660,8 +901,14 @@ void scenebattle_updatePhase0ActionSelect() { //action select
                 case EActionScope_USER:
                     //scenebattle_actors[idx].x, scenebattle_actors[idx].y
                     if (input_trigger(BUTTON_A)) {
+                        scenebattle_destroyTargetSelector();
                         // Submit
                         actor->actionTargetIdx = idx;
+                        scenebattle_idx++;
+                        battler_setAnimation(actor, EBattlerAnim_READY, false);
+                        scenebattle_step = 1;
+                        scenebattle_gotoNextActor();
+                        scenebattle_substep = 0;
                     }
                     break;
                 case EActionScope_ALLY:
@@ -676,8 +923,14 @@ void scenebattle_updatePhase0ActionSelect() { //action select
                         scenebattle_moveTargetSelector();
                     }
                     if (input_trigger(BUTTON_A)) {
+                        scenebattle_destroyTargetSelector();
                         // Submit
                         actor->actionTargetIdx = idx;
+                        scenebattle_idx++;
+                        battler_setAnimation(actor, EBattlerAnim_READY, false);
+                        scenebattle_step = 1;
+                        scenebattle_gotoNextActor();
+                        scenebattle_substep = 0;
                     }
                     break;
                 case EActionScope_ENEMY:
@@ -692,16 +945,33 @@ void scenebattle_updatePhase0ActionSelect() { //action select
                         scenebattle_moveTargetSelector();
                     }
                     if (input_trigger(BUTTON_A)) {
+                        scenebattle_destroyTargetSelector();
                         // Submit
                         actor->actionTargetIdx = idx;
+                        scenebattle_idx++;
+                        battler_setAnimation(actor, EBattlerAnim_READY, false);
+                        scenebattle_step = 1;
+                        scenebattle_gotoNextActor();
+                        scenebattle_substep = 0;
                     }
                     break;
                 default:
+                    if (input_trigger(BUTTON_A)) {
+                        scenebattle_destroyTargetSelector();
+                        // Submit
+                        actor->actionTargetIdx = 0;
+                        scenebattle_idx++;
+                        battler_setAnimation(actor, EBattlerAnim_READY, false);
+                        scenebattle_step = 1;
+                        scenebattle_gotoNextActor();
+                        scenebattle_substep = 0;
+                    }
                     break;
             }
             // 
             if (input_trigger(BUTTON_B)) {
                 scenebattle_destroyTargetSelector();
+                scenebattle_drawActionSelWindow();
                 if (actor->actionBasic == 0) scenebattle_step = 1;
                 else {
                     if (scenebattle_itemMode == 0) scenebattle_drawSkillWindow();
@@ -713,24 +983,45 @@ void scenebattle_updatePhase0ActionSelect() { //action select
     }
 }
 void scenebattle_updatePhase1TurnExecution() { //turn execution
+    if (scenebattle_turnOrderCount < 1) {
+        scenebattle_phase = 2;
+        scenebattle_step = 0;
+        return;
+    }
+    RPG_StateBattler* battler = scenebattle_turnOrder[scenebattle_turnOrderCount-1];
     switch(scenebattle_step) {
         case 0:
             // Action start
+            scenebattle_drawActionName(battler);
+            scenebattle_step++;
             break;
         case 1: // Move to
+            battler_moveToTarget(battler);
+            scenebattle_waitCount = BATTLER_MOVETOTARGET_FRAMES;
+            scenebattle_step++;
             break;
         case 2: // Action display
+            scenebattle_step++;
             break;
         case 3: // Action execution (dmg, etc)
+            scenebattle_step++;
             break;
         case 4: // Move back
+            battler_moveToHome(battler);
+            scenebattle_waitCount = BATTLER_MOVETOHOME_FRAMES;
+            scenebattle_step++;
             break;
         case 5: // Judge
+            scenebattle_eraseActionName(battler);
+            scenebattle_waitCount = 30;
+            scenebattle_step = 0;
+            scenebattle_turnOrderCount--;
             break;
     }
 }
 void scenebattle_updatePhase2RoundEnd() { //round end
     //Reset stuff, pass turns in states, etc.
+    scenebattle_phase = 0;
 }
 void scenebattle_updatePhase3BattleEnd() { //battle end
     // Wait for end of animation for battle end display
@@ -742,12 +1033,17 @@ void scenebattle_updatePhase3BattleEnd() { //battle end
 void scenebattle_updateObjects() {
     for (int i=0; i<MAX_PARTY;i++) {
         if (scenebattle_actors[i].hidden) continue;
+        battler_updateMove(&scenebattle_actors[i]);
         battler_setDepth(&scenebattle_actors[i]);
+        battler_updateBoostSprites(i);
     }
     for(int i=0; i<MAX_TROOP;i++) {
         if (scenebattle_enemies[i].hidden) continue;
+        battler_updateMove(&scenebattle_enemies[i]);
         battler_setDepth(&scenebattle_enemies[i]);
     }
+    scenebattle_orbState += 4;
+    if (scenebattle_orbState > 360) scenebattle_orbState -= 360;
 }
 void scenebattle_updatePhase() {
     switch (scenebattle_phase) {
