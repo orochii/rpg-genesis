@@ -104,7 +104,7 @@ void battler_applyBuff(RPG_StateBattler* battler, EAttrib buff, s16 value) {
     battler_recalcStats(battler);
 }
 bool battler_canMove(RPG_StateBattler* battler) {
-    if (battler->hp <= 0) return false;
+    if (battler->currHp <= 0) return false;
     if (battler->states[EBattlerState_STUN] != 0) return false;
     if (battler->states[EBattlerState_FROZEN] != 0) return false;
     return true;
@@ -1434,6 +1434,7 @@ void scenebattle_updatePhase1TurnExecution() { //turn execution
             for (int i = 0; i < scenebattle_currTargetsCount; i++) {
                 //todo: I want jumping numbers
                 battler_displayDamage(scenebattle_currTargets[i]);
+                battler_resetAnimation(scenebattle_currTargets[i]);
             }
             scenebattle_step++;
             break;
