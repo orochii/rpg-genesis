@@ -16,7 +16,7 @@ void map_init(int _id) {
 		map.events[i].posY = ev.y<<MAP_SCROLL_DEPTH;
 	}
 	//
-	player.id = map.worldmap ? DATA_HEROS[0].characterIdxWmap : DATA_HEROS[0].characterIdx;
+	player.id = map.worldmap ? DATA_ACTORS[0].characterIdxWmap : DATA_ACTORS[0].characterIdx;
 	//
 	interpreter_reset();
 }

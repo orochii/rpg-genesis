@@ -21,14 +21,14 @@ typedef struct {
 } RPG_StateHero;
 typedef enum {
 	EBattlerAnim_IDLE,
-	EBattlerAnim_READY,
-	EBattlerAnim_DOWN,
-	EBattlerAnim_WEAK,
-	EBattlerAnim_MOVE,
 	EBattlerAnim_ATTACK,
+	EBattlerAnim_DOWN,
+	EBattlerAnim_MOVE,
+	EBattlerAnim_WEAK,
 	EBattlerAnim_MAGIC,
 	EBattlerAnim_ITEM,
-	EBattlerAnim_VICTORY
+	EBattlerAnim_VICTORY,
+	EBattlerAnim_READY,
 } EBattlerAnim;
 
 typedef struct {
@@ -37,6 +37,7 @@ typedef struct {
 	char battlerIdx;
 	bool hidden;
 	bool isEnemy;
+	u8 idx;
 	u16 x, y;
 	u16 baseX,baseY;
 	u16 targetX,targetY,moveDuration;
@@ -47,13 +48,18 @@ typedef struct {
 	u16 origHp,origMp,origAtk,origDef,origMag,origSpd; // original value. enemy=database, hero=state value
 	// states turns
 	char states[MAX_STATES];
+	char buffs[EAttrib__MAX];
 	// action
-	char actionBasic; // 0:attack 1:skill 2:item 3:guard
-	char actionId; //b0:-- b1:skillId b2:itemId b3:--
-	char actionTargetScope; // 0:user 1:ally 2:allies 3:enemy 4:enemies
-	char actionTargetIdx;
+	unsigned char actionBasic; // 0:attack 1:skill 2:item 3:guard
+	unsigned char actionId; //b0:-- b1:skillId b2:itemId b3:--
+	unsigned char actionTargetScope; // 0:user 1:ally 2:allies 3:enemy 4:enemies
+	unsigned char actionTargetIdx;
 	s16 actionSpeed;
+	s16 actionSpeedTotal;
 	u8 boosts;
+	//
+	char damageString[8];
+	bool damageDisplay;
 } RPG_StateBattler;
 
 typedef struct {
@@ -103,7 +109,7 @@ u16 bgaIdx = 0;
 Sprite* mapSprites[MAX_SCENE_SPRITES];
 u16 mapSprites_c = 0;
 // State
-RPG_StateHero heroes[MAX_HEROS]; 	// 84
+RPG_StateHero actors[MAX_ACTORS]; 	// 84
 RPG_StateParty party;				// 127
 RPG_StateMap map;				 	// 1750
 RPG_StateCharacter player;			// 54
@@ -119,27 +125,27 @@ void state_levelUpCharacter(u16 id) {
 	u16 defRand= ((a & 0b0000000000110000) >> 4) >> 1;
 	u16 magRand= ((a & 0b0000000000001100) >> 2) >> 1;
 	u16 spdRand= ((a & 0b0000000000000011)) >> 1;
-	heroes[id].hp += DATA_HEROS[id].hpPlus + hpRand;
-	heroes[id].mp += DATA_HEROS[id].mpPlus + mpRand;
-	heroes[id].atk += DATA_HEROS[id].atkPlus + atkRand;
-	heroes[id].def += DATA_HEROS[id].defPlus + defRand;
-	heroes[id].mag += DATA_HEROS[id].magPlus + magRand;
-	heroes[id].spd += DATA_HEROS[id].spdPlus + spdRand;
+	actors[id].hp += DATA_ACTORS[id].hpPlus + hpRand;
+	actors[id].mp += DATA_ACTORS[id].mpPlus + mpRand;
+	actors[id].atk += DATA_ACTORS[id].atkPlus + atkRand;
+	actors[id].def += DATA_ACTORS[id].defPlus + defRand;
+	actors[id].mag += DATA_ACTORS[id].magPlus + magRand;
+	actors[id].spd += DATA_ACTORS[id].spdPlus + spdRand;
 	// Learnings
-	for (int i = 0; i < DATA_HEROS[id].numLearnings; i++) {
+	for (int i = 0; i < DATA_ACTORS[id].numLearnings; i++) {
 		u8 pos = i << 1;
-		u8 level = DATA_HEROS[id].learnings[pos];
-		if (level <= heroes[id].level) {
-			u8 skillId = DATA_HEROS[id].learnings[pos+1];
+		u8 level = DATA_ACTORS[id].learnings[pos];
+		if (level <= actors[id].level) {
+			u8 skillId = DATA_ACTORS[id].learnings[pos+1];
 			u8 _idx = 0;
 			while (_idx < MAX_SKILLS) {
 				// Already learned
-				if (heroes[id].skills[_idx] == skillId) {
+				if (actors[id].skills[_idx] == skillId) {
 					_idx = 255;
 				} else {
 					// Slot is empty
-					if (heroes[id].skills[_idx] == 0) {
-						heroes[id].skills[_idx] = skillId;
+					if (actors[id].skills[_idx] == 0) {
+						actors[id].skills[_idx] = skillId;
 						_idx = 255;
 					} else {
 						_idx++;
@@ -150,38 +156,39 @@ void state_levelUpCharacter(u16 id) {
 	}
 }
 void state_setupCharacter(u16 id, char avgLevel) {
-	u16 l = strlen(DATA_HEROS[id].name);
-	strncpy(heroes[id].name, DATA_HEROS[id].name, l);
-	heroes[id].level = 1;
-	heroes[id].exp = 1000 * (avgLevel - 1);
-	heroes[id].hp = DATA_HEROS[id].hp;
-	heroes[id].mp = DATA_HEROS[id].mp;
-	heroes[id].atk = DATA_HEROS[id].atk;
-	heroes[id].def = DATA_HEROS[id].def;
-	heroes[id].mag = DATA_HEROS[id].mag;
-	heroes[id].spd = DATA_HEROS[id].spd;
+	u16 l = strlen(DATA_ACTORS[id].name);
+	strncpy(actors[id].name, DATA_ACTORS[id].name, l);
+	actors[id].level = 1;
+	actors[id].exp = 1000 * (avgLevel - 1);
+	actors[id].hp = DATA_ACTORS[id].hp;
+	actors[id].mp = DATA_ACTORS[id].mp;
+	actors[id].atk = DATA_ACTORS[id].atk;
+	actors[id].def = DATA_ACTORS[id].def;
+	actors[id].mag = DATA_ACTORS[id].mag;
+	actors[id].spd = DATA_ACTORS[id].spd;
 	u8 _idx = 0;
 	while (_idx < MAX_STATES) {
-		heroes[id].states[_idx] = 0;
+		actors[id].states[_idx] = 0;
 		_idx++;
 	}
 	_idx = 0;
 	while (_idx < MAX_SKILLS) {
-		heroes[id].skills[_idx] = 0;
+		actors[id].skills[_idx] = 0;
 		_idx++;
 	}
-	while (heroes[id].level < avgLevel) {
-		heroes[id].level += 1;
+	state_levelUpCharacter(id);
+	while (actors[id].level < avgLevel) {
+		actors[id].level += 1;
 		state_levelUpCharacter(id);
 	}
-	heroes[id].currHp = heroes[id].hp;
-	heroes[id].currMp = heroes[id].mp;
-	heroes[id].lastItemIdx = 0;
-	heroes[id].lastSkillIdx= 0;
+	actors[id].currHp = actors[id].hp;
+	actors[id].currMp = actors[id].mp;
+	actors[id].lastItemIdx = 0;
+	actors[id].lastSkillIdx= 0;
 }
 void state_initCharacters() {
-	for (int i = 0; i < MAX_HEROS; i++) {
-		state_setupCharacter(i, 50);
+	for (int i = 0; i < MAX_ACTORS; i++) {
+		state_setupCharacter(i, 1);
 	}
 }
 void state_initParty() {

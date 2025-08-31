@@ -8,6 +8,7 @@
         "system.h": "c",
         "genesis.h": "c",
         "state.h": "c",
-        "xutility": "c"
+        "xutility": "c",
+        "visual_scripts.h": "c"
     }
 }

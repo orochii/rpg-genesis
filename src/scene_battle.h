@@ -13,9 +13,13 @@
 #define ORB_RADIUS_Y 8
 #define ORB_OX 4
 #define ORB_OY 20
+#define BATTLER_DEPTHADJUST -320
+#define BATTLER_ACTIONMOVING_START 7
 #define BATTLER_MOVETOTARGET_FRAMES 24
 #define BATTLER_MOVETOHOME_FRAMES 24
+#define ACTIONSPEED_RANDMASK 0b0000000000001111
 
+int scenebattle_result = 0;
 int scenebattle_phase = 0;
 int scenebattle_step = 0;
 int scenebattle_idx = 0;
@@ -38,13 +42,67 @@ Image* scenebattle_battleback;
 Sprite* scenebattle_selectorSprite;
 Sprite* scenebattle_targetSelectorSprite;
 Sprite* scenebattle_orbSprites[MAX_PARTY*MAX_BOOSTS];
+Sprite* scenebattle_actionOverlay;
+u16 scenebattle_actionOverlayState;
+u16 scenebattle_orbSpritesState[MAX_PARTY];
 u16 scenebattle_orbState;
-u8* scenebattle_cachedTargets[MAX_TROOP];
+u8* scenebattle_cachedTargets[MAX_PARTY+MAX_TROOP];
 u8 scenebattle_numCachedTargets;
 u8 scenebattle_cachedTargetIdx;
 RPG_StateBattler* scenebattle_turnOrder[MAX_PARTY+MAX_TROOP];
 u8 scenebattle_turnOrderCount;
+RPG_StateBattler* scenebattle_currBattler;
+RPG_StateBattler* scenebattle_currTargets[MAX_PARTY+MAX_TROOP];
+u8 scenebattle_currTargetsCount;
+u16 scenebattle_animFrame = 0;
+callback_t scenebattle_visualScript = NULL;
 
+#include "scripts/visual_scripts.h"
+#include "scripts/effect_scripts.h"
+
+u16 battler_calcBuff(u16 base, char buff) {
+    if (buff==0) return base;
+    s16 plus = (base * buff) / 10;
+    return base + plus + buff;
+}
+void battler_recalcStats(RPG_StateBattler* battler) {
+    battler->hp = battler->origHp;
+    battler->mp = battler->origMp;
+    battler->atk = battler_calcBuff(battler->origAtk, battler->buffs[EAttrib_ATK]);
+    battler->def = battler_calcBuff(battler->origDef, battler->buffs[EAttrib_DEF]);
+    battler->mag = battler_calcBuff(battler->origMag, battler->buffs[EAttrib_MAG]);
+    battler->spd = battler_calcBuff(battler->origSpd, battler->buffs[EAttrib_SPD]);
+}
+void battler_healHp(RPG_StateBattler* battler, s16 amount, bool display) {
+    // apply change (clamped)
+    u16 a = battler->hp - battler->currHp;
+    if (a < amount) battler->currHp = battler->hp;
+    else battler->currHp += amount;
+    // display
+    if (display) {
+        sprintf(battler->damageString, "+%d", amount);
+        battler->damageDisplay = true;
+    }
+}
+void battler_dmgHp(RPG_StateBattler* battler, s16 amount, bool display) {
+    // apply change (clamped)
+    if (amount > battler->currHp) battler->currHp = 0;
+    else battler->currHp -= amount;
+    // display
+    if (display) {
+        sprintf(battler->damageString, "-%d", amount);
+        battler->damageDisplay = true;
+    }
+}
+void battler_applyStat(RPG_StateBattler* battler, u8 stat, char val) {
+    battler->states[stat] = val;
+}
+void battler_applyBuff(RPG_StateBattler* battler, EAttrib buff, s16 value) {
+    battler->buffs[buff] += value;
+    if (value < -MAX_BUFF) value = -MAX_BUFF;
+    if (value > MAX_BUFF) value = MAX_BUFF;
+    battler_recalcStats(battler);
+}
 bool battler_canMove(RPG_StateBattler* battler) {
     if (battler->hp <= 0) return false;
     if (battler->states[EBattlerState_STUN] != 0) return false;
@@ -56,9 +114,14 @@ bool battler_canInput(RPG_StateBattler* battler) {
     if (battler->states[EBattlerState_BERSERK] != 0) return false;
     return battler_canMove(battler);
 }
-void battler_setAnimation(RPG_StateBattler* battler, EBattlerAnim animation, bool loop) {
+void battler_setFlip(RPG_StateBattler* battler, bool flip) {
+    Sprite* spr = mapSprites[battler->sprIdx];
+    SPR_setHFlip(spr, flip);
+}
+void battler_setAnimation(RPG_StateBattler* battler, EBattlerAnim animation, bool loop, EBattlerAnim fallback) {
     Sprite* spr = mapSprites[battler->sprIdx];
     u16 max = spr->definition->numAnimation;
+    if (animation >= max) animation = fallback;
     if (animation >= max) animation = EBattlerAnim_IDLE;
     SPR_setAnimationLoop(spr, loop);
     SPR_setAnimAndFrame(spr, (s16)animation, 0);
@@ -66,30 +129,64 @@ void battler_setAnimation(RPG_StateBattler* battler, EBattlerAnim animation, boo
 void battler_resetAnimation(RPG_StateBattler* battler) {
     EBattlerAnim anim = EBattlerAnim_IDLE;
     if (battler->currHp == 0) anim = EBattlerAnim_DOWN;
-    // todo: states
     else {
         bool status = battler->states[EBattlerState_STUN] != 0 || battler->states[EBattlerState_BURN] != 0 || battler->states[EBattlerState_FROZEN] != 0;
         bool weak = battler->currHp < (battler->hp>>2);
         if (status || weak) anim = EBattlerAnim_WEAK;
     }
     //
-    battler_setAnimation(battler, anim, true);
+    battler_setAnimation(battler, anim, true, EBattlerAnim_IDLE);
+}
+void battler_setActionAnimation(RPG_StateBattler* battler) {
+    EBattlerAnim targetAnimation = EBattlerAnim_IDLE;
+    switch(battler->actionBasic) {
+        case 0:
+            targetAnimation = EBattlerAnim_ATTACK;
+            break;
+        case 1:
+            if (battler->actionId < BATTLER_ACTIONMOVING_START)
+                targetAnimation = EBattlerAnim_ATTACK;
+            else
+                targetAnimation = EBattlerAnim_MAGIC;
+            break;
+        case 2:
+            targetAnimation = EBattlerAnim_ITEM;
+            break;
+        case 3:
+            targetAnimation = EBattlerAnim_READY;
+            break;
+    }
+    battler_setAnimation(battler, targetAnimation, false, EBattlerAnim_ATTACK);
 }
 void battler_moveTo(RPG_StateBattler* battler, u16 x, u16 y, u16 d) {
     battler->targetX = x;
     battler->targetY = y;
     battler->moveDuration = d;
 }
+bool battler_shouldMoveToTarget(RPG_StateBattler* battler) {
+    switch (battler->actionBasic) {
+        case 0: //attack
+            return true;
+        case 1: //skill
+            return (battler->actionId < BATTLER_ACTIONMOVING_START);
+        case 2: //item
+            return true;
+        case 3: //guard
+        case 4: //wait
+        default:
+            return false;
+    }
+}
 void battler_moveToTarget(RPG_StateBattler* battler) {
     switch (battler->actionTargetScope) {
         case EActionScope_ALLY:
-            battler->targetX = scenebattle_actors[battler->actionTargetIdx].x - 32;
-            battler->targetY = scenebattle_actors[battler->actionTargetIdx].y;
+            battler->targetX = scenebattle_currTargets[0]->x - 32;
+            battler->targetY = scenebattle_currTargets[0]->y + 4;
             battler->moveDuration = BATTLER_MOVETOTARGET_FRAMES;
             break;
         case EActionScope_ENEMY:
-            battler->targetX = scenebattle_enemies[battler->actionTargetIdx].x + 32;
-            battler->targetY = scenebattle_enemies[battler->actionTargetIdx].y;
+            battler->targetX = scenebattle_currTargets[0]->x + 32;
+            battler->targetY = scenebattle_currTargets[0]->y + 4;
             battler->moveDuration = BATTLER_MOVETOTARGET_FRAMES;
             break;
     }
@@ -113,7 +210,7 @@ void battler_updateMove(RPG_StateBattler* battler) {
 }
 void battler_setDepth(RPG_StateBattler* battler) {
     Sprite* spr = mapSprites[battler->sprIdx];
-    s16 depth = -320 - (battler->y >> 2);
+    s16 depth = BATTLER_DEPTHADJUST - (battler->y >> 2);
     SPR_setDepth(spr, depth);
 }
 void battler_setBoostCount(u8 idx, u8 c) {
@@ -138,40 +235,82 @@ void battler_setBoostCount(u8 idx, u8 c) {
         }
     }
 }
+void battler_setBoostSpend(int idx) {
+    scenebattle_orbSpritesState[idx] = 24;
+    u8 si = idx*MAX_BOOSTS;
+    for (u8 i=0; i < MAX_BOOSTS; i++) {
+        Sprite* orb = scenebattle_orbSprites[si+i];
+        if (orb != NULL) {
+            SPR_setAnimAndFrame(orb, 1, 0);
+            SPR_setAnimationLoop(orb, false);
+        }
+    }
+}
 void battler_updateBoostSprites(int idx) {
     u16 x = scenebattle_actors[idx].x - ORB_OX;
     u16 y = scenebattle_actors[idx].y - ORB_OY;
     u8 si = idx*MAX_BOOSTS;
     for (u8 i=0; i < MAX_BOOSTS; i++) {
         if (scenebattle_orbSprites[si+i] != NULL) {
-            s16 angle = scenebattle_orbState - (i * 80);
-            while (angle < 0) angle += 360;
-            fix16 a = FIX16(angle);
-            fix16 c = F16_mul(F16_cos(a), FIX16(ORB_RADIUS_X));
-            fix16 s = F16_mul(F16_sin(a), FIX16(ORB_RADIUS_Y));
-            u16 xx = x + F16_toInt(c);
-            u16 yy = y + F16_toInt(s);
-            u16 cx = SPR_getPositionX(scenebattle_orbSprites[si+i]);
-            u16 cy = SPR_getPositionY(scenebattle_orbSprites[si+i]);
-            u16 px = (xx+cx)>>1;
-            u16 py = (yy+cy)>>1;
-            SPR_setPosition(scenebattle_orbSprites[si+i], px, py);
-            s16 depth = -320 - ((scenebattle_actors[idx].y+F16_toInt(s)) >> 2);
-            SPR_setDepth(scenebattle_orbSprites[si+i], depth);
+            Sprite* orb = scenebattle_orbSprites[si+i];
+            if (orb->animInd == 0) {
+                s16 angle = scenebattle_orbState - (i * 80);
+                while (angle < 0) angle += 360;
+                fix16 a = FIX16(angle);
+                fix16 c = F16_mul(F16_cos(a), FIX16(ORB_RADIUS_X));
+                fix16 s = F16_mul(F16_sin(a), FIX16(ORB_RADIUS_Y));
+                u16 xx = x + F16_toInt(c);
+                u16 yy = y + F16_toInt(s);
+                u16 cx = SPR_getPositionX(orb);
+                u16 cy = SPR_getPositionY(orb);
+                u16 px = (xx+cx)>>1;
+                u16 py = (yy+cy)>>1;
+                SPR_setPosition(orb, px, py);
+                s16 depth = -320 - ((scenebattle_actors[idx].y+F16_toInt(s)) >> 2);
+                SPR_setDepth(orb, depth);
+            } else if (orb->animInd == 1) {
+                u16 d = scenebattle_orbSpritesState[idx];
+                if (d > 0) {
+                    u16 cx = SPR_getPositionX(orb);
+                    u16 cy = SPR_getPositionY(orb);
+                    u16 tx = x;
+                    u16 ty = y - 32;
+                    // x = (x * (d - 1) + tx) / d
+                    cx = (cx * (d - 1) + tx) / d;
+                    cy = (cy * (d - 1) + ty) / d;
+                    SPR_setPosition(orb, cx, cy);
+                    scenebattle_orbSpritesState[idx] -= 1;
+                } else {
+                    SPR_releaseSprite(orb);
+                    scenebattle_orbSprites[si+i] = NULL;
+                }
+            }
         }
     }
 }
-
-void scenebattle_recalcStats(RPG_StateBattler* battler) {
-    // just copy for now
-    battler->hp = battler->origHp;
-    battler->mp = battler->origMp;
-    battler->atk = battler->origAtk;
-    battler->def = battler->origDef;
-    battler->mag = battler->origMag;
-    battler->spd = battler->origSpd;
+bool battler_determineIf0HP(RPG_StateBattler* battler) {
+    switch(battler->actionBasic) {
+        case 1://skill
+            if (DATA_SKILLS[battler->actionId].effectId == EActionEffect_REVIVE) return true;
+            break;
+        case 2://item
+            if (DATA_ITEMS[battler->actionId].effectId == EActionEffect_REVIVE) return true;
+            break;
+    }
+    return false;
 }
+void battler_displayDamage(RPG_StateBattler* battler) {
+    if (battler->damageDisplay) {
+        u16 x = battler->x >> 3;
+        u16 y = battler->y >> 3;
+        sys_drawText(battler->damageString, x, y, false);
+        battler->damageDisplay = false;
+        scenebattle_waitCount = 30;
+    }
+}
+
 void scenebattle_initBattle() {
+    scenebattle_result = 0;
     scenebattle_phase = 0;
     scenebattle_step = 0;
     scenebattle_idx = 0;
@@ -187,9 +326,11 @@ void scenebattle_initBattle() {
     scenebattle_skillTopRow = 0;
     scenebattle_skillIdx = 0;
     scenebattle_scheduleRedrawWindow = false;
+    scenebattle_actionOverlay = NULL;
     for(int i = 0; i < MAX_PARTY*MAX_BOOSTS; i++) {
         scenebattle_orbSprites[i] = NULL;
     }
+    scenebattle_visualScript = NULL;
 }
 void scenebattle_initEnemy() {
     u16* formation = DATA_FORMATIONS[0];
@@ -203,6 +344,7 @@ void scenebattle_initEnemy() {
             // Get display
             scenebattle_enemies[i].hidden = false;
             scenebattle_enemies[i].isEnemy = true;
+            scenebattle_enemies[i].idx = i;
             scenebattle_enemies[i].name = DATA_ENEMIES[id].name;
             scenebattle_enemies[i].battlerIdx = DATA_ENEMIES[id].battlerIdx;
             scenebattle_enemies[i].x = x;
@@ -219,7 +361,7 @@ void scenebattle_initEnemy() {
             scenebattle_enemies[i].origMag = DATA_ENEMIES[id].mag;
             scenebattle_enemies[i].origSpd = DATA_ENEMIES[id].spd;
             // Recalc stats
-            scenebattle_recalcStats(&scenebattle_enemies[i]);
+            battler_recalcStats(&scenebattle_enemies[i]);
             // Get current state
             scenebattle_enemies[i].currHp = scenebattle_enemies[i].hp;
             scenebattle_enemies[i].currMp = scenebattle_enemies[i].mp;
@@ -244,8 +386,9 @@ void scenebattle_initParty() {
             // Get display
             scenebattle_actors[i].hidden = false;
             scenebattle_actors[i].isEnemy = false;
-            scenebattle_actors[i].name = heroes[id].name;
-            scenebattle_actors[i].battlerIdx = DATA_HEROS[id].battlerIdx;
+            scenebattle_actors[i].idx = i;
+            scenebattle_actors[i].name = actors[id].name;
+            scenebattle_actors[i].battlerIdx = DATA_ACTORS[id].battlerIdx;
             scenebattle_actors[i].x = x;
             scenebattle_actors[i].y = y;
             scenebattle_actors[i].baseX = x;
@@ -253,18 +396,19 @@ void scenebattle_initParty() {
             scenebattle_actors[i].targetX = x;
             scenebattle_actors[i].targetY = y;
             // Get original stats
-	        scenebattle_actors[i].origHp = heroes[id].hp;
-            scenebattle_actors[i].origMp = heroes[id].mp;
-            scenebattle_actors[i].origAtk = heroes[id].atk;
-            scenebattle_actors[i].origDef = heroes[id].def;
-            scenebattle_actors[i].origMag = heroes[id].mag;
-            scenebattle_actors[i].origSpd = heroes[id].spd;
+            scenebattle_actors[i].origHp = actors[id].hp;
+            scenebattle_actors[i].origMp = actors[id].mp;
+            scenebattle_actors[i].origAtk = actors[id].atk;
+            scenebattle_actors[i].origDef = actors[id].def;
+            scenebattle_actors[i].origMag = actors[id].mag;
+            scenebattle_actors[i].origSpd = actors[id].spd;
+            // todo: equipment stats
             // Get current state
-            scenebattle_actors[i].currHp = heroes[id].currHp;
-            scenebattle_actors[i].currMp = heroes[id].currMp;
+            scenebattle_actors[i].currHp = actors[id].currHp;
+            scenebattle_actors[i].currMp = actors[id].currMp;
             scenebattle_actors[i].boosts = 0;
             // Recalc stats
-            scenebattle_recalcStats(&scenebattle_actors[i]);
+            battler_recalcStats(&scenebattle_actors[i]);
         }
         scenebattle_actors[i].sprIdx = -1;
     }
@@ -392,6 +536,205 @@ u8 scenebattle_getRandomHeroTarget(bool includeHP0) {
     if (numTargets != 0) _idx = scenebattle_cachedTargets[r % numTargets];
     return _idx;
 }
+void scenebattle_determineTargets() {
+    //hits 0hp?
+    bool hit0HP = battler_determineIf0HP(scenebattle_currBattler);
+    u8 i = 0;
+    RPG_StateBattler* target = NULL;
+    //
+    scenebattle_currTargetsCount = 0;
+    switch (scenebattle_currBattler->actionTargetScope)
+    {
+    case EActionScope_USER:
+        scenebattle_currTargets[0] = scenebattle_currBattler;
+        scenebattle_currTargetsCount = 1;
+        break;
+    case EActionScope_ALLY:
+        i = scenebattle_currBattler->actionTargetIdx;
+        target = &scenebattle_actors[i];
+        if (target->hidden == false) {
+            bool dead = target->currHp <= 0;
+            if (dead == hit0HP) {
+                scenebattle_currTargets[0] = target;
+                scenebattle_currTargetsCount = 1;
+            }
+        }
+        if (scenebattle_currTargetsCount==0) {
+            for(i = 0; i < MAX_PARTY; i++) {
+                target = &scenebattle_actors[i];
+                if(target->hidden==false) {
+                    bool dead = target->currHp <= 0;
+                    if (dead == hit0HP) {
+                        scenebattle_currTargets[0] = target;
+                        scenebattle_currTargetsCount = 1;
+                        i = MAX_PARTY;
+                    }
+                }
+            }
+        }
+        break;
+    case EActionScope_ALLIES:
+        for(i = 0; i < MAX_PARTY; i++){
+            target = &scenebattle_actors[i];
+            if(target->hidden==false) {
+                bool dead = target->currHp <= 0;
+                if (dead == hit0HP) {
+                    scenebattle_currTargets[scenebattle_currTargetsCount] = target;
+                    scenebattle_currTargetsCount++;
+                }
+            }
+        }
+        break;
+    case EActionScope_ENEMY:
+        i = scenebattle_currBattler->actionTargetIdx;
+        target = &scenebattle_enemies[i];
+        if (target->hidden == false) {
+            bool dead = target->currHp <= 0;
+            if (dead == hit0HP) {
+                scenebattle_currTargets[0] = target;
+                scenebattle_currTargetsCount = 1;
+            }
+        }
+        if (scenebattle_currTargetsCount==0) {
+            for(i = 0; i < MAX_TROOP; i++) {
+                target = &scenebattle_enemies[i];
+                if(target->hidden==false) {
+                    bool dead = target->currHp <= 0;
+                    if (dead == hit0HP) {
+                        scenebattle_currTargets[0] = target;
+                        scenebattle_currTargetsCount = 1;
+                        i = MAX_TROOP;
+                    }
+                }
+            }
+        }
+        break;
+    case EActionScope_ENEMIES:
+        for(i = 0; i < MAX_TROOP; i++){
+            target = &scenebattle_enemies[i];
+            if(target->hidden==false) {
+                bool dead = target->currHp <= 0;
+                if (dead == hit0HP) {
+                    scenebattle_currTargets[scenebattle_currTargetsCount] = target;
+                    scenebattle_currTargetsCount++;
+                }
+            }
+        }
+        break;
+    case EActionScope_EVERYONE:
+        for(i = 0; i < MAX_PARTY; i++){
+            target = &scenebattle_actors[i];
+            if(target->hidden==false) {
+                bool dead = target->currHp <= 0;
+                if (dead == hit0HP) {
+                    scenebattle_currTargets[scenebattle_currTargetsCount] = target;
+                    scenebattle_currTargetsCount++;
+                }
+            }
+        }
+        for(i = 0; i < MAX_TROOP; i++){
+            target = &scenebattle_enemies[i];
+            if(target->hidden==false) {
+                bool dead = target->currHp <= 0;
+                if (dead == hit0HP) {
+                    scenebattle_currTargets[scenebattle_currTargetsCount] = target;
+                    scenebattle_currTargetsCount++;
+                }
+            }
+        }
+        break;
+    }
+}
+void scenebattle_executeVisualScript(RPG_StateBattler* battler, u16 scriptIdx) {
+    scenebattle_animFrame = 0;
+    //remember to cache the right targets.
+    scenebattle_visualScript = BATTLE_VISUAL_SCRIPTS[scriptIdx];
+}
+void scenebattle_executeActionVisualScript(RPG_StateBattler* battler) {
+    u16 visualScriptIdx = 0;
+    switch (battler->actionBasic)
+    {
+    case 0: //attack
+        visualScriptIdx = 1;//will do later
+        break;
+    case 1: //skill
+        visualScriptIdx = DATA_SKILLS[battler->actionId].visualsIdx;
+        break;
+    case 2: //item
+        visualScriptIdx = DATA_ITEMS[battler->actionId].visualsIdx;
+        break;
+    }
+    scenebattle_executeVisualScript(battler, visualScriptIdx);
+}
+void scenebattle_executeEffectScript(RPG_StateBattler* target, EActionEffect id, s16 param1, s16 param2, s16 param3, s16 param4) {
+    switch (id) {
+        case EActionEffect_NONE:
+            actionEffect_none();
+            break;
+        case EActionEffect_PHYSDMG:
+            actionEffect_physDmg(scenebattle_currBattler, target, param1, param2);
+            break;
+        case EActionEffect_PHYSDMGSTAT:
+            actionEffect_physDmgStat(scenebattle_currBattler, target, param1, param2, param3, param4);
+            break;
+        case EActionEffect_SETSTAT:
+            actionEffect_setStat(scenebattle_currBattler, target, param1, param2, param3, param4);
+            break;
+        case EActionEffect_MAGICDMG:
+            actionEffect_magicDmg(scenebattle_currBattler, target, param1, param2);
+            break;
+        case EActionEffect_MAGICDMGBUFF:
+            actionEffect_magicDmgBuff(scenebattle_currBattler, target, param1, param2, param3, param4);
+            break;
+        case EActionEffect_MAGICDMGPIERCE:
+            actionEffect_magicDmgPierce(scenebattle_currBattler, target, param1, param2);
+            break;
+        case EActionEffect_PERCDMG:
+            actionEffect_percDmg(scenebattle_currBattler, target, param1);
+            break;
+        case EActionEffect_BUFF:
+            actionEffect_buff(scenebattle_currBattler, target, param1, param2);
+            break;
+        case EActionEffect_REVIVE:
+            actionEffect_revive(scenebattle_currBattler, target, param1);
+            break;
+        default:
+            break;
+    }
+}
+void scenebattle_executeActionEffectScript(RPG_StateBattler* target) {
+    EActionEffect id = 0;
+    s16 param1, param2, param3, param4;
+    RPG_DataSkill* skill = NULL;
+    switch(scenebattle_currBattler->actionBasic) {
+        case 0: //attack
+            skill = &DATA_SKILLS[0];
+            break;
+        case 1: //skill
+            skill = &DATA_SKILLS[scenebattle_currBattler->actionId-1];
+            break;
+        case 2: //item
+            id = DATA_ITEMS[scenebattle_currBattler->actionId-1].effectId;
+            param1 = DATA_ITEMS[scenebattle_currBattler->actionId-1].effectParam1;
+            param2 = DATA_ITEMS[scenebattle_currBattler->actionId-1].effectParam2;
+            param3 = DATA_ITEMS[scenebattle_currBattler->actionId-1].effectParam3;
+            param4 = DATA_ITEMS[scenebattle_currBattler->actionId-1].effectParam4;
+            break;
+        case 3: //guard
+            skill = &DATA_SKILLS[1];
+            break;
+        default:
+            break;
+    }
+    if (skill != NULL) {
+        id = skill->effectId;
+        param1 = skill->effectParam1;
+        param2 = skill->effectParam2;
+        param3 = skill->effectParam3;
+        param4 = skill->effectParam4;
+    }
+    scenebattle_executeEffectScript(target, id, param1, param2, param3, param4);
+}
 
 void scenebattle_create() {
     //
@@ -453,8 +796,8 @@ void scenebattle_drawSkillWindow() {
     char id = party.members[scenebattle_idx];
     sys_drawWindow(1,1,24,3,TILE_USER_INDEX);
     sys_drawWindow(11,4,14,15,TILE_USER_INDEX);
-    sys_drawSkillList(12,5, 12,13, scenebattle_skillTopRow, scenebattle_skillIdx, &heroes[id].skills);
-    sys_drawSkillDesc(2, 2, 22, scenebattle_itemIdx, &heroes[id].skills);
+    sys_drawSkillList(12,5, 12,13, scenebattle_skillTopRow, scenebattle_skillIdx, &actors[id].skills);
+    sys_drawSkillDesc(2, 2, 22, scenebattle_itemIdx, &actors[id].skills);
 }
 void scenebattle_drawItemWindow() {
     sys_drawWindow(1,1,24,3,TILE_USER_INDEX);
@@ -526,9 +869,11 @@ void scenebattle_cacheTargets(u8 scope, bool invert) {
             scenebattle_numCachedTargets = 1;
             break;
         case EActionScope_ALLY:
+        case EActionScope_ALLIES:
             scenebattle_numCachedTargets = scenebattle_getHeroTargets(false);
             break;
         case EActionScope_ENEMY:
+        case EActionScope_ENEMIES:
             scenebattle_numCachedTargets = scenebattle_getEnemyTargets(false);
             break;
         default:
@@ -559,7 +904,7 @@ void scenebattle_sortActionOrder() {
     for (int curr = 1; curr < scenebattle_turnOrderCount; curr++) {
         s16 i = curr;
         s16 j = i-1;
-        while(i>0 && scenebattle_turnOrder[i]->actionSpeed < scenebattle_turnOrder[j]->actionSpeed) {
+        while(i>0 && scenebattle_turnOrder[i]->actionSpeedTotal < scenebattle_turnOrder[j]->actionSpeedTotal) {
             RPG_StateBattler* a = scenebattle_turnOrder[j];
             scenebattle_turnOrder[j] = scenebattle_turnOrder[i];
             scenebattle_turnOrder[i] = a;
@@ -574,6 +919,9 @@ void scenebattle_makeActionOrder() {
     for (int i = 0; i < MAX_PARTY; i++) {
         RPG_StateBattler* actor = &scenebattle_actors[i];
         if (actor->hidden) continue;
+        u16 r = random() & ACTIONSPEED_RANDMASK;
+        //setRandomSeed(r);
+        actor->actionSpeedTotal = actor->actionSpeed + r;
         scenebattle_turnOrder[scenebattle_turnOrderCount] = actor;
         scenebattle_turnOrderCount += 1;
     }
@@ -581,6 +929,9 @@ void scenebattle_makeActionOrder() {
     for (int i = 0; i < MAX_TROOP; i++) {
         RPG_StateBattler* enemy = &scenebattle_enemies[i];
         if (enemy->hidden) continue;
+        u16 r = random() & ACTIONSPEED_RANDMASK;
+        //setRandomSeed(r);
+        enemy->actionSpeedTotal = enemy->actionSpeed + r;
         scenebattle_turnOrder[scenebattle_turnOrderCount] = enemy;
         scenebattle_turnOrderCount += 1;
     }
@@ -589,10 +940,10 @@ void scenebattle_makeActionOrder() {
 }
 void scenebattle_commitSkillIdx() {
     unsigned char id = party.members[scenebattle_idx];
-    heroes[id].lastSkillIdx = scenebattle_skillIdx;
+    actors[id].lastSkillIdx = scenebattle_skillIdx;
     //
     unsigned char heroId = party.members[scenebattle_idx];
-    unsigned char skillId= heroes[id].skills[scenebattle_skillIdx];
+    unsigned char skillId= actors[id].skills[scenebattle_skillIdx];
     u8 scope = DATA_SKILLS[skillId-1].scope;
     scenebattle_actors[scenebattle_idx].actionId = skillId;
     scenebattle_actors[scenebattle_idx].actionTargetScope = scope;
@@ -606,7 +957,7 @@ void scenebattle_commitSkillIdx() {
 }
 void scenebattle_commitItemIdx() {
     unsigned char id = party.members[scenebattle_idx];
-    heroes[id].lastItemIdx = scenebattle_itemIdx;
+    actors[id].lastItemIdx = scenebattle_itemIdx;
     //
     unsigned char itemId = party.inventoryItemId[scenebattle_skillIdx];
     u8 scope = DATA_ITEMS[itemId-1].scope;
@@ -622,11 +973,11 @@ void scenebattle_commitItemIdx() {
 }
 void scenebattle_resetIdxAndRow() {
     unsigned char id = party.members[scenebattle_idx];
-    scenebattle_skillIdx = heroes[id].lastSkillIdx;
+    scenebattle_skillIdx = actors[id].lastSkillIdx;
     scenebattle_skillTopRow = 0;
     if (scenebattle_skillTopRow > scenebattle_skillIdx) scenebattle_skillTopRow = scenebattle_skillIdx;
     if (scenebattle_skillTopRow < scenebattle_skillIdx-12) scenebattle_skillTopRow = scenebattle_skillIdx-12;
-    scenebattle_itemIdx = heroes[id].lastItemIdx;
+    scenebattle_itemIdx = actors[id].lastItemIdx;
     scenebattle_itemTopRow = 0;
     if (scenebattle_itemTopRow > scenebattle_itemIdx) scenebattle_itemTopRow = scenebattle_itemIdx;
     if (scenebattle_itemTopRow < scenebattle_itemIdx-12) scenebattle_itemTopRow = scenebattle_itemIdx-12;
@@ -659,6 +1010,7 @@ void scenebattle_gotoNextActor() {
                     scenebattle_moveActorSelector(scenebattle_idx);
                 }
                 foundNext = true;
+                scenebattle_resetIdxAndRow();
             } else if (battler_canMove(actor)) {
                 actor->actionBasic = 0;
                 actor->actionId = 0;
@@ -726,6 +1078,46 @@ void scenebattle_makeEnemyActions() {
             enemy->actionTargetIdx = scenebattle_getRandomHeroTarget(false);
             enemy->actionSpeed = enemy->spd;
         }
+    }
+}
+void scenebattle_showSkillOverlay(RPG_StateBattler* battler) {
+    u16 x = battler->x;
+    u16 y = battler->y;
+    s16 depth = BATTLER_DEPTHADJUST - ((y+4) >> 2);
+    switch (battler->actionBasic) {
+        case 1: //skill
+            x -= vfx_magic_overlay.w >> 1;
+            y -= vfx_magic_overlay.h;
+            scenebattle_actionOverlay = SPR_addSprite(&vfx_magic_overlay, x, y, TILE_ATTR(PAL2,true,false,false));
+            SPR_setDepth(scenebattle_actionOverlay, depth);
+            scenebattle_actionOverlayState = 32;
+            break;
+        case 2: // might add
+            break;
+    }
+}
+void scenebattle_eraseDamages() {
+    VDP_clearTileMapRect(BG_A, 0, 8, 40,20);
+}
+void scenebattle_judge() {
+    bool partyAlive = false;
+    for (int i = 0; i < MAX_PARTY; i++) {
+        RPG_StateBattler* b = &scenebattle_actors[i];
+        if (b->hidden==false && b->currHp > 0) {
+            partyAlive = true;
+        }
+    }
+    bool troopAlive = false;
+    for (int i = 0; i < MAX_TROOP; i++) {
+        RPG_StateBattler* b = &scenebattle_enemies[i];
+        if (b->hidden==false && b->currHp > 0) {
+            troopAlive = true;
+        }
+    }
+    if (!partyAlive || !troopAlive) {
+        if (partyAlive) scenebattle_result = 1;
+        else scenebattle_result = -1;
+        scenebattle_phase = 3;
     }
 }
 
@@ -819,7 +1211,7 @@ void scenebattle_updatePhase0ActionSelect() { //action select
                         actor->actionTargetIdx = 0;
                         actor->actionSpeed = actor->spd + 1000;
                         scenebattle_idx++;
-                        battler_setAnimation(actor, EBattlerAnim_READY, false);
+                        battler_setAnimation(actor, EBattlerAnim_READY, false, EBattlerAnim_IDLE);
                         scenebattle_step = 1;
                         scenebattle_gotoNextActor();
                         scenebattle_substep = 0;
@@ -841,19 +1233,18 @@ void scenebattle_updatePhase0ActionSelect() { //action select
                     if (scenebattle_skillIdx < 0) scenebattle_skillIdx = 0;
                     if (scenebattle_skillTopRow > scenebattle_skillIdx) scenebattle_skillTopRow = scenebattle_skillIdx;
                     char id = party.members[scenebattle_idx];
-                    sys_drawSkillList(12,5, 12,13, scenebattle_skillTopRow, scenebattle_skillIdx, &heroes[id].skills);
-                    sys_drawSkillDesc(2, 2, 22, scenebattle_itemIdx, &heroes[id].skills);
+                    sys_drawSkillList(12,5, 12,13, scenebattle_skillTopRow, scenebattle_skillIdx, &actors[id].skills);
+                    sys_drawSkillDesc(2, 2, 22, scenebattle_itemIdx, &actors[id].skills);
                 }
                 else if (input_repeat(BUTTON_DOWN)) {
                     scenebattle_skillIdx += 1;
                     if (scenebattle_skillIdx >= MAX_INVENTORY) scenebattle_skillIdx = MAX_INVENTORY-1;
-                    u8 _id = party.inventoryItemId[scenebattle_skillIdx];
-                    u8 _qty= party.inventoryItemQty[scenebattle_skillIdx];
-                    if (_id==0 || _qty==0) scenebattle_skillIdx--;
-                    if (scenebattle_skillTopRow < scenebattle_skillIdx-12) scenebattle_skillTopRow = scenebattle_skillIdx-12;
                     char id = party.members[scenebattle_idx];
-                    sys_drawSkillList(12,5, 12,13, scenebattle_skillTopRow, scenebattle_skillIdx, &heroes[id].skills);
-                    sys_drawSkillDesc(2, 2, 22, scenebattle_itemIdx, &heroes[id].skills);
+                    u8 _id = actors[id].skills[scenebattle_skillIdx];
+                    if (_id==0) scenebattle_skillIdx--;
+                    if (scenebattle_skillTopRow < scenebattle_skillIdx-12) scenebattle_skillTopRow = scenebattle_skillIdx-12;
+                    sys_drawSkillList(12,5, 12,13, scenebattle_skillTopRow, scenebattle_skillIdx, &actors[id].skills);
+                    sys_drawSkillDesc(2, 2, 22, scenebattle_itemIdx, &actors[id].skills);
                 }
                 if (input_trigger(BUTTON_A)) {
                     // check cost
@@ -905,7 +1296,7 @@ void scenebattle_updatePhase0ActionSelect() { //action select
                         // Submit
                         actor->actionTargetIdx = idx;
                         scenebattle_idx++;
-                        battler_setAnimation(actor, EBattlerAnim_READY, false);
+                        battler_setAnimation(actor, EBattlerAnim_READY, false, EBattlerAnim_IDLE);
                         scenebattle_step = 1;
                         scenebattle_gotoNextActor();
                         scenebattle_substep = 0;
@@ -927,7 +1318,7 @@ void scenebattle_updatePhase0ActionSelect() { //action select
                         // Submit
                         actor->actionTargetIdx = idx;
                         scenebattle_idx++;
-                        battler_setAnimation(actor, EBattlerAnim_READY, false);
+                        battler_setAnimation(actor, EBattlerAnim_READY, false, EBattlerAnim_IDLE);
                         scenebattle_step = 1;
                         scenebattle_gotoNextActor();
                         scenebattle_substep = 0;
@@ -949,7 +1340,7 @@ void scenebattle_updatePhase0ActionSelect() { //action select
                         // Submit
                         actor->actionTargetIdx = idx;
                         scenebattle_idx++;
-                        battler_setAnimation(actor, EBattlerAnim_READY, false);
+                        battler_setAnimation(actor, EBattlerAnim_READY, false, EBattlerAnim_IDLE);
                         scenebattle_step = 1;
                         scenebattle_gotoNextActor();
                         scenebattle_substep = 0;
@@ -961,7 +1352,7 @@ void scenebattle_updatePhase0ActionSelect() { //action select
                         // Submit
                         actor->actionTargetIdx = 0;
                         scenebattle_idx++;
-                        battler_setAnimation(actor, EBattlerAnim_READY, false);
+                        battler_setAnimation(actor, EBattlerAnim_READY, false, EBattlerAnim_IDLE);
                         scenebattle_step = 1;
                         scenebattle_gotoNextActor();
                         scenebattle_substep = 0;
@@ -983,44 +1374,97 @@ void scenebattle_updatePhase0ActionSelect() { //action select
     }
 }
 void scenebattle_updatePhase1TurnExecution() { //turn execution
+    // When all battlers acted, go to round end
     if (scenebattle_turnOrderCount < 1) {
         scenebattle_phase = 2;
         scenebattle_step = 0;
         return;
     }
+    //
     RPG_StateBattler* battler = scenebattle_turnOrder[scenebattle_turnOrderCount-1];
     switch(scenebattle_step) {
         case 0:
+            // Make sure can act
+            if (battler_canMove(battler) == false) {
+                scenebattle_step = 0;
+                scenebattle_turnOrderCount--;
+                return;
+            }
             // Action start
+            scenebattle_currBattler = battler;
+            scenebattle_determineTargets();
             scenebattle_drawActionName(battler);
+            scenebattle_waitCount = 16;
             scenebattle_step++;
             break;
         case 1: // Move to
-            battler_moveToTarget(battler);
-            scenebattle_waitCount = BATTLER_MOVETOTARGET_FRAMES;
+            if (battler_shouldMoveToTarget(battler)) {
+                battler_moveToTarget(battler);
+                battler_setAnimation(battler, EBattlerAnim_MOVE, true, EBattlerAnim_IDLE);
+                scenebattle_waitCount = BATTLER_MOVETOTARGET_FRAMES;
+            }
             scenebattle_step++;
             break;
-        case 2: // Action display
+        case 2: // Action display (user)
+            scenebattle_waitCount = 24;
+            if (battler->isEnemy==false) {
+                if (battler->boosts > 0) {
+                    battler_setBoostSpend(battler->idx);
+                }
+            }
+            battler_setActionAnimation(battler);
+            scenebattle_showSkillOverlay(battler);
             scenebattle_step++;
             break;
-        case 3: // Action execution (dmg, etc)
+        case 3: // Action display (target)
+            scenebattle_waitCount = 12;
+            scenebattle_executeActionVisualScript(battler);
             scenebattle_step++;
             break;
-        case 4: // Move back
-            battler_moveToHome(battler);
-            scenebattle_waitCount = BATTLER_MOVETOHOME_FRAMES;
+        case 4: // Action execution (dmg, etc)
+            for (int i = 0; i < scenebattle_currTargetsCount; i++) {
+                scenebattle_executeActionEffectScript(scenebattle_currTargets[i]);
+            }
             scenebattle_step++;
             break;
-        case 5: // Judge
+        case 5: // damage display
+            //display damage calculated in previous step, if any, refresh target
+            for (int i = 0; i < scenebattle_currTargetsCount; i++) {
+                //todo: I want jumping numbers
+                battler_displayDamage(scenebattle_currTargets[i]);
+            }
+            scenebattle_step++;
+            break;
+        case 6: // Move back
+            scenebattle_eraseDamages();
+            scenebattle_redrawHUD();
+            if (battler->isEnemy==false) {
+                battler_setBoostCount(battler->idx, 0);
+                battler->boosts = 0;
+            }
+            if (battler_shouldMoveToTarget(battler)) {
+                battler_setAnimation(battler, EBattlerAnim_MOVE, true, EBattlerAnim_IDLE);
+                battler_setFlip(battler, true);
+                battler_moveToHome(battler);
+                scenebattle_waitCount = BATTLER_MOVETOHOME_FRAMES;
+            }
+            scenebattle_step++;
+            break;
+        case 7: // Judge
+            battler_resetAnimation(battler);
+            battler_setFlip(battler, false);
             scenebattle_eraseActionName(battler);
             scenebattle_waitCount = 30;
             scenebattle_step = 0;
             scenebattle_turnOrderCount--;
+            // JUDGE
+            scenebattle_judge();
+            // Check who is alive etc
             break;
     }
 }
 void scenebattle_updatePhase2RoundEnd() { //round end
-    //Reset stuff, pass turns in states, etc.
+    //todo: pass turns in states, etc.
     scenebattle_phase = 0;
 }
 void scenebattle_updatePhase3BattleEnd() { //battle end
@@ -1044,6 +1488,15 @@ void scenebattle_updateObjects() {
     }
     scenebattle_orbState += 4;
     if (scenebattle_orbState > 360) scenebattle_orbState -= 360;
+    if (scenebattle_actionOverlay != NULL) {
+        if (scenebattle_actionOverlayState > 0) {
+            scenebattle_actionOverlayState -= 1;
+            if (scenebattle_actionOverlayState == 0) {
+                SPR_releaseSprite(scenebattle_actionOverlay);
+                scenebattle_actionOverlay = NULL;
+            }
+        }
+    }
 }
 void scenebattle_updatePhase() {
     switch (scenebattle_phase) {
@@ -1062,12 +1515,16 @@ void scenebattle_updatePhase() {
     }
 }
 void scenebattle_update() {
-    scenebattle_updateObjects();
-    if (scenebattle_waitCount > 0) {
-        scenebattle_waitCount -= 1;
+    if (scenebattle_visualScript != NULL) {
+        scenebattle_visualScript();
     } else {
-        // Phase Update
-        scenebattle_updatePhase();
+        scenebattle_updateObjects();
+        if (scenebattle_waitCount > 0) {
+            scenebattle_waitCount -= 1;
+        } else {
+            // Phase Update
+            scenebattle_updatePhase();
+        }
     }
     // Update sprites.
 	SPR_update();

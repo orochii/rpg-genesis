@@ -164,8 +164,8 @@ void sys_processText(char* to, u16 len, const char* from) {
 				}
 				switch(code) {
 					case 'h':
-						exIdx = strlen(heroes[a].name);
-						strncpy(dst, heroes[a].name, exIdx);
+						exIdx = strlen(actors[a].name);
+						strncpy(dst, actors[a].name, exIdx);
 						dst += exIdx;
 						break;
 					case 'f':

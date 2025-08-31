@@ -6,13 +6,14 @@
 #define CENTER_Y (112<<MAP_SCROLL_DEPTH)
 #define MAX_SCENE_SPRITES 32
 #define MAX_FLAGS 256
-#define MAX_HEROS 3
+#define MAX_ACTORS 3
 #define MAX_PARTY 3
 #define MAX_TROOP 6
 #define MAX_GOLD 999999
 #define MAX_INVENTORY 60
 #define MAX_SKILLS 128
 #define MAX_STATES 8
+#define MAX_BUFF 5
 
 #define INPUT_REPEAT_L 16
 #define INPUT_REPEAT_S 8
