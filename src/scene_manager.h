@@ -17,15 +17,16 @@ void scene_reinit() {
 
 void scene_update() {
 	// Destroy first
-	if (scene.destroyed) {
+	/*if (scene.destroyed) {
 		scene.update();
 		scene.destroyed = false;
-	}
+	}*/
 	// Create
 	if (!scene.initialized) {
 		scene_reinit();
 		scene.create();
 		scene.initialized = true;
+		scene.destroyed = false;
 	}
 	// Update
 	scene.update();

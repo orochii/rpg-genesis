@@ -738,7 +738,7 @@ void scenebattle_executeActionEffectScript(RPG_StateBattler* target) {
 
 void scenebattle_create() {
     //
-    scenebattle_selectorSprite = 0;
+    scenebattle_selectorSprite = NULL;
     // Setup system
     sys_pal = PAL0;
     VDP_loadTileSet(&ts_system, tileIdx, DMA);
@@ -1117,6 +1117,8 @@ void scenebattle_judge() {
     if (!partyAlive || !troopAlive) {
         if (partyAlive) scenebattle_result = 1;
         else scenebattle_result = -1;
+        //
+        scenebattle_turnOrderCount = 0;
         scenebattle_phase = 3;
     }
 }
