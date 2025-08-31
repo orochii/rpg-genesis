@@ -1236,7 +1236,7 @@ void scenebattle_updatePhase0ActionSelect() { //action select
                     if (scenebattle_skillTopRow > scenebattle_skillIdx) scenebattle_skillTopRow = scenebattle_skillIdx;
                     char id = party.members[scenebattle_idx];
                     sys_drawSkillList(12,5, 12,13, scenebattle_skillTopRow, scenebattle_skillIdx, &actors[id].skills);
-                    sys_drawSkillDesc(2, 2, 22, scenebattle_itemIdx, &actors[id].skills);
+                    sys_drawSkillDesc(2, 2, 22, scenebattle_skillIdx, &actors[id].skills);
                 }
                 else if (input_repeat(BUTTON_DOWN)) {
                     scenebattle_skillIdx += 1;
@@ -1246,7 +1246,7 @@ void scenebattle_updatePhase0ActionSelect() { //action select
                     if (_id==0) scenebattle_skillIdx--;
                     if (scenebattle_skillTopRow < scenebattle_skillIdx-12) scenebattle_skillTopRow = scenebattle_skillIdx-12;
                     sys_drawSkillList(12,5, 12,13, scenebattle_skillTopRow, scenebattle_skillIdx, &actors[id].skills);
-                    sys_drawSkillDesc(2, 2, 22, scenebattle_itemIdx, &actors[id].skills);
+                    sys_drawSkillDesc(2, 2, 22, scenebattle_skillIdx, &actors[id].skills);
                 }
                 if (input_trigger(BUTTON_A)) {
                     // check cost
