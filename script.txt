@@ -1,6 +1,6 @@
 CHARACTERS
     LIN
-        Young girl from some town (?). Has experience with the bow and daggers, agile fighter. Raised as a hunter.
+        Young girl from some town (?). Has experience with bow and daggers, agile fighter. Raised as a hunter.
         She likes exploring and adventure. She wants to protect her town, while also having a certain curiosity for the outside world.
     RAYNE
         Magician guy from the magic arts school. Left the school out of "disagreements" with his mentor.
@@ -8,6 +8,138 @@ CHARACTERS
     GREESE
         An ancient robot from the nearby ruins. Very sturdy.
         Knows nothing of the present world, follows you around after being waken up in the ruin. Wants to know why he was "born" in this world, and where are his friends.
+        He turns out to be a prototype Seer, meaning artificial humans are all pretty much just biological robots in a way. Rumans are able to self-replicate.
+
+MAGIC STONES: found at each ruin
+    - yes I stole these from Beregon's jam -
+    Emerald Ring --GREEN        -> wind
+    Sapphire Bracelet --BLUE    -> ice
+    Ruby Necklace --RED         -> fire
+    Citrine Brooch --YELLOW     -> holy
+
+SETTING
+    The world as we know it is young, but older than any of our great-great grandparents. There is lush green pastures and peaceful villages living in harmony, but also wilderness and danger. We live to feed ourselves and survive.
+    There is four ruins from ancient times, each located on a different island. Each of these ruins hold immense dangers, but also great powers. One of such relics is the magic amulet, and it's guardian.
+    Nobody knows nothing about these ruins. They don't know who made them, when, why or how they appeared, they've very much been there since ever. And nobody dares to explore them.
+    There's two satellites in the lower atmosphere, they're referred as the eyes of Ra. They come from the ancient civilization and were used to synthesize magical gems, those eventually fell and are what people use now. They're erroneously referred to as rubies, sapphires, emeralds and citrines.
+    The "Humans" in this planet were created by the satellites after a spaceship crashed in the planet. They're not real humans (and I'd do them look less human but I refuse, cuz lazy). Humans here have sockets where they can insert the magical gems, imbued with runes, to cast "magic". In reality the magic is just programs, ran by the human's bodies, using the gem as catalyst.
+
+STORY
+    FIRST RUIN - Emerald
+        NEAR FOREST
+            Story starts in the forest near Lin's town.
+            Lin walks through the forest and finds a mysterious guy there.
+            That guy happens to be Rayne, who is looking for the ruins in the forest.
+            Rayne attacks some of the people from the town as they were denying him entrance to the area towards the ruins.
+            Lin appears in their rescue and punches Rayne in the face (first battle).
+            Rayne escapes, the others go to his capture.
+        NEAR TOWN
+            Lin comes back to town, and finds Rayne imprisoned.
+            * Explanation for the socket system. Insert gems in your body to gain skills.
+            Rayne gives Lin a sob story for why he wants to enter the ruins (it's all lies).
+            Rayne seems to have knowledge about the ruins and Lin is interested. Lin either (a)breaks him out or (b)ignores him.
+                (a) will get you expelled from the town
+            Either help or not, a big explosion is heard, in the direction of the ruins?
+            A group of monsters attacks the town? or something related to the ruins.
+                (b) If you don't help Rayne he gets out somehow.
+            There's signs the creatures come from the ruins.
+            You decide to join forces with Rayne and accept to accompany him to the ruins.
+        NEAR RUINS
+            Explore the ruins, do funni puzzles.
+            Fight enemies, wow! Funny enough the enemies don't seem to be the same that attacked the town, instead you find raiders.
+            Find a chamber inside, with a robot holding a gem.
+            You also find another man. He's the culprit. It appears these raiders beat Rayne to the ruins, blew up the entrance, causing the local monsters to go on a frenzy towards the town.
+            You fight the guy, then suddenly the robot lights up. It has no recollection of what it's doing there or who it is.
+            You receive a strange message from someone (telepathy? think of Petro from Lennus 2), they tell you the world is in danger and you must acquire all the damn gems from the four runes and whatnot. Yes this is the evil guy making you do their errands for him. :D
+            This person presents himself as the Seer, and asks us to help him.
+            Definitely not bad guy shows you a vision just to make you pumped. Wow look at the destruction that ensues wow. A bit of manipulation for good measure.
+    (now uh get to next town yay! go to second ruin, get the gem, repeat 3 times)
+    SECOND RUIN - Sapphire
+        - Second ruin: what problem is in the town? any reason for not being able to enter? Maybe it's a kingdom, and the ruins are inside the castle. You're forbidden entrance and there's no way you're getting past the guards. Maybe we can apply the sneak/combat/attack here.
+            - Errand for the king and ask for permission?
+            - Sneak past the guards despite me saying it was impossible?
+            - Beat up everyone and become an enemy of the entire kingdom?
+            * You find the treasure hunter here, she will try to smuggle the gem before you, apparently she's working for some evil guy (the same guy the first dude was working with/for). Fight with her for the thing!
+    THIRD RUIN - Ruby
+        - Third ruin: Found inside a jungle. Enter the jungle and you'll find yourself being attacked by natives. The first time you can escape their capture.
+            - You can decide to avoid them as they now appear around the map as enemy chasers.
+            - You can beat the chasers all down, little by little they will not like you at all and any negotiation options will disappear. Good if you were thinking about sneaking anyway.
+            - You can let yourself be captured, and defeat some random ass superwarrior to win your freedom. Then you can either go away or kill everyone including their king.
+            - Find some treasure and make them your allies. Yay friends!
+            * Find the treasure hunter again, but owo she's developing feelongs. She'll definitely not join you later!
+    FOURTH RUIN - Citrine
+        - Fourth ruin: Mining town? There's a mine in the center of a town, near a volcano. The volcano has been dormant for centuries, maybe forever. You decide is wise to explore these ruins since you know that the ruins are inside those mines, somewhere.
+            - Taking the gem will apparently activate the volcano.
+            - You can leave something of "equal value" behind and the volcano will not erupt. However your only option is leaving the robot, and no he doesn't come back.
+            * The treasure hunter strikes again! But she's not so sure of what she's doing, for some reason.
+    ENDGAME?
+        Having all the gems you're good to go find the evil guy-- eh I mean the voice you heard before.
+        What? it was a ploy all along, you lose the gems because reasons Maybe he gets someone kidnapped? I could give you the option of letting that person die or giving up the gems.
+            * I guess here's where the treasure hunter could get kidnapped, and you can either save her or tell her to go die.
+            - Decide to fight, which will make him murder the treasure hunter. He's way stronger than you so you'll probably get pummeled to death.
+            - Or give up and get a new party member, I guess!
+            - I'll see how to determine if you're winning, so he stops the battle and treatens to destroy something, take hostage idk your town or Rayne's academy, maybe just idk you? idk how. Point is, you have to give the gems, sorry. Is this okay? Or maybe I should up the ante from the start.
+        You meet another seer. Apparently the seers are a lineage of "humans" that are immortal and very powerful, but can't reproduce, they were created to observe over the population and to act in moments of danger, mostly as guides. Only one seer is supposed to be active at the time, but the system finally caught up to the other seer's ambitions and decided to enable another seer as an emergency measure.
+        Exposition dump. All Humans are artificial. They came to the planet not too long ago as an experiment, created by a spaceship that crashlanded in the planet, this crash was premeditated from the start. The ruins are pieces of the spaceship, and before ceasing to function the ship launched two satellites called the eyes of Ra. One of these is where most Seers are kept on stasis, while the other is some other dumb shit idk creates gems I guess?
+        Apparently the planet is set into a crash course with a star or something, and only by using the gems will fix it. The "evil" seer is trying to fix this, however in the process he'll detonate the total destruction of the current civilization.
+        You technically don't care about that because you'll be long dead when that happens. So it sucks for you.
+        Go to space and punch the evil seer in the face.
+
+AREAS
+    1   Near Town
+    2   Near Forest --forest creatures:
+            Wolf
+            Deer
+            Goblin
+    3   Near Ruin --mostly goblin family+bats:
+            goblin
+            mage goblin
+            giant bat
+            *Ogre
+    4   Kingdom
+    5   Fiend's Cloister :) --optional, darkness creatures?: 
+            imps
+            demong
+    6   Second Ruin --undead: 
+            zombie
+            poison rat
+            earthworm
+            *Necromancer
+    7   Port Town
+    8   The Jungle --jungle critters: 
+            hawk
+            crocodile
+            giant spooder
+            maneater plant
+            tiger
+    9   Jungle Town
+    10  Secret Optional Cave? --optional, cave water creatures: 
+            crocodile
+            caveshark
+            *Kraken
+    11  Third Ruin --jungle pyramid:
+            mummy
+            gargoyle
+            snake
+            *
+    12  Mining Town
+    13  Fourth Ruin --fire&ice cave:
+            fire spirit (f)
+            hellhound (f)
+            ice spirit (i)
+            yuki onna (i)
+            cockatrice (f/i)
+            *Molten Golem
+    14  The Seer Domain/Mansion?/idk
+    15  Whatever place you meet the Second Seer
+    16  Space Elevator?, Space Shuttle, whatever --:
+            robot guard
+            attacker
+            *guardian
+    17  Space Station/Satellite - The Eye of Ra --:
+        --robots? space organisms
+    18* Sea
+        --shark,octopus,killerfis,sahagin
 
 SKILLS
     Attack      -   Deals basic damage. Uses animation based on weapon equipped.
@@ -48,34 +180,46 @@ STATES
     --
     --
 
-ENEMIES
-    Kobold
-
-MAGIC STONES: found at each ruin
-    - yes I stole these from Beregon's jam -
-    Emerald Ring --GREEN        -> wind
-    Sapphire Bracelet --BLUE    -> fire
-    Ruby Necklace --RED         -> ice
-    Citrine Brooch --YELLOW     -> ?, cut from game?
-
-SETTING
-    The world as we know it is young, but older than any of our great-great grandparents. There is lush green pastures and peaceful villages living in harmony, but also wilderness and danger. We live to feed ourselves and survive.
-    There is four ruins from ancient times, each located on a different island. Each of these ruins hold immense dangers, but also great powers. One of such relics is the magic amulet, and it's guardian.
-    Nobody knows nothing about these ruins. They don't know who made them, when, why or how they appeared, they've very much been there since ever. And nobody dares to explore them.
-
-STORY
-    Story starts in the forest near Lin's town.
-    Lin walks through the forest and finds a mysterious guy there.
-    That guy happens to be Rayne, who is looking for the ruins in the forest.
-    Rayne attacks "by mistake" some of the people from the town as they were denying him entrance to the area towards the ruins.
-    Lin appears in their rescue and punches Rayne in the face (first battle).
-    Rayne escapes, the others go to his capture.
-    Lin comes back to town, and finds Rayne imprisoned.
-    Rayne gives Lin a sob story for why he wants to enter the ruins (it's all lies).
-    Rayne seems to have knowledge about the ruins and Lin is interested. Lin either (a)breaks him out or (b)ignores him.
-        (a) will get you expelled from the town
-    Either help or not, a big explosion is heard, in the direction of the ruins?
-    A group of monsters attacks the town? or something related to the ruins.
-        (b) If you don't help Rayne he gets out somehow.
-    There's signs the creatures come from the ruins.
-    You decide to join forces with Rayne and accept to accompany him to the ruins.
+ITEMS
+    Potion              Recover 30% HP.
+    HiPotion            Recover 60% HP.
+    Elixir              Full recovery.
+    Remedy              Cures BURN.
+    Thaw                Cures FROZEN.
+    Reviver             Cures KO.
+    Short Bow           Basic.              L-- 5/0/0/-2
+    Zephyr              Powers up wind.     L-- 7/0/0/-3
+    Hunter Bow          High crit ratio.    L-- 10/0/0/-4
+    Dagger              Basic.              L-- 3/0/0/+2
+    Main Gauche         Higher defense.     L-- 4/3/0/0
+    Assassin Edge       High crit ratio.    L-- 5/0/0/+3
+    Staff               Basic.              -R- 2/2/0/0
+    Fire Rod            Powers up fire.     -R- 4/5/0/0
+    Ice Rod             Powers up water.    -R- 5/6/0/0
+    Book                Basic.              -R- 1/0/3/0
+    Holy Scripts        Powers up holy.     -R- 2/0/6/0
+    Armageddon          Powers up nature.   -R- 6/0/7/0
+    Hammer              Basic.              --G 6/0/0/-4
+    Lucky Mallet        Ignores evasion.    --G 10/0/0/-6
+    Destroyer           High crit ratio.    --G 16/2/0/-8
+    Punch               Basic.              --G 4/0/0/0
+    Leech Claw          Drains damage.      --G 7/0/0/0
+    Dragonmaul          High crit ratio.    --G 11/4/0/0
+    Robes               Basic.              LR- 0/2/0/0
+    Wood Armor          Weak to fire.       L-G 0/3/0/0
+    Chainmail           Slightly heavy.     LR- 0/4/0/-1
+    Iron Plate          Weak to water.      --G 0/7/0/-2
+    White Mantle        Powers up holy.     -R- 0/5/0/0
+    Steel Vest          Weak to wind.       --G 0/10/0/-3
+    Linen Robe          Basic.              LR- 0/7/0/0
+    Titanium P.         Weak to holy.       --G 0/12/0/-5
+    Emerald             Fuels wind magic.
+    Sapphire            Fuels water magic.
+    Ruby                Fuels fire magic.
+    Citrine             Fuels holy magic.
+    Onyx                Fuels nature magic.
+    Emerald Ring        Powers wind magic at no cost. Raises evasion.
+    Sapphire Bracelet   Powers water magic at no cost. Protects against frozen.
+    Ruby Necklace       Powers fire magic at no cost. Protects agains burn.
+    Citrine Brooch      Powers holy magic at no cost. Heals 8hp/turn.
+    Onyx Earring        Powers nature magic at no cost. Restores 4mp/turn.

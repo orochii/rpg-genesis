@@ -27,6 +27,7 @@ SPRITE boost_orb "boost_orb.png" 1 1 FAST 8
 
 SPRITE vfx_magic_overlay "vfx/magic_overlay.png" 5 5 FAST 6
 SPRITE vfx_slash "vfx/slash.png" 6 6 FAST 4
+SPRITE vfx_hit "vfx/hit.png" 6 6 FAST 4
 
 TILESET ts_world "tileset/world.png" BEST ALL
 MAP tm_world "map/world.png" ts_world BEST ALL

@@ -24,6 +24,7 @@ extern const SpriteDefinition target_selector;
 extern const SpriteDefinition boost_orb;
 extern const SpriteDefinition vfx_magic_overlay;
 extern const SpriteDefinition vfx_slash;
+extern const SpriteDefinition vfx_hit;
 extern const TileSet ts_world;
 extern const MapDefinition tm_world;
 extern const Palette pa_world;

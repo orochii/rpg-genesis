@@ -32,6 +32,7 @@ int scenebattle_sx = 0;
 int scenebattle_sy = 0;
 bool scenebattle_itemMode = 0;
 bool scenebattle_scheduleRedrawWindow = false;
+bool scenebattle_cyclingEnemies = false;
 int scenebattle_itemIdx = 0;
 int scenebattle_itemTopRow = 0;
 int scenebattle_skillIdx = 0;
@@ -56,6 +57,7 @@ RPG_StateBattler* scenebattle_currTargets[MAX_PARTY+MAX_TROOP];
 u8 scenebattle_currTargetsCount;
 u16 scenebattle_animFrame = 0;
 callback_t scenebattle_visualScript = NULL;
+SpriteDefinition* scenebattle_visualScriptSprite;
 
 #include "scripts/visual_scripts.h"
 #include "scripts/effect_scripts.h"
@@ -645,26 +647,33 @@ void scenebattle_determineTargets() {
         break;
     }
 }
-void scenebattle_executeVisualScript(RPG_StateBattler* battler, u16 scriptIdx) {
+void scenebattle_executeVisualScript(RPG_StateBattler* battler, u16 scriptIdx, SpriteDefinition* sprite) {
     scenebattle_animFrame = 0;
     //remember to cache the right targets.
     scenebattle_visualScript = BATTLE_VISUAL_SCRIPTS[scriptIdx];
+    scenebattle_visualScriptSprite = sprite;
 }
 void scenebattle_executeActionVisualScript(RPG_StateBattler* battler) {
     u16 visualScriptIdx = 0;
+    SpriteDefinition* visualSprite = NULL;
     switch (battler->actionBasic)
     {
     case 0: //attack
         visualScriptIdx = 1;//will do later
+        visualSprite = &vfx_hit;
         break;
     case 1: //skill
-        visualScriptIdx = DATA_SKILLS[battler->actionId].visualsIdx;
+        RPG_DataSkill* skill = &DATA_SKILLS[battler->actionId];
+        visualScriptIdx = skill->visualsIdx;
+        visualSprite = skill->visualsSprite;
         break;
     case 2: //item
-        visualScriptIdx = DATA_ITEMS[battler->actionId].visualsIdx;
+        RPG_DataItem* item = &DATA_ITEMS[battler->actionId];
+        visualScriptIdx = item->visualsIdx;
+        visualSprite = item->visualsSprite;
         break;
     }
-    scenebattle_executeVisualScript(battler, visualScriptIdx);
+    scenebattle_executeVisualScript(battler, visualScriptIdx, visualSprite);
 }
 void scenebattle_executeEffectScript(RPG_StateBattler* target, EActionEffect id, s16 param1, s16 param2, s16 param3, s16 param4) {
     switch (id) {
@@ -850,6 +859,50 @@ void scenebattle_moveTargetSelector() {
             break;
     }
     SPR_setPosition(scenebattle_targetSelectorSprite, x, y);
+}
+bool scenebattle_cycleSelectorThroughAllies(RPG_StateBattler* actor) {
+    bool cycled = false;
+    u8 a = scenebattle_cachedTargetIdx;
+    bool hp0 = battler_determineIf0HP(actor);
+    RPG_StateBattler* selected = NULL;
+    while (selected == NULL) {
+        scenebattle_cachedTargetIdx++;
+        if (!scenebattle_actors[scenebattle_cachedTargetIdx].hidden) {
+            bool dead = scenebattle_actors[scenebattle_cachedTargetIdx].currHp <= 0;
+            if (dead == hp0) selected = &scenebattle_actors[scenebattle_cachedTargetIdx];
+        }
+        if (scenebattle_cachedTargetIdx >= MAX_PARTY) {
+            scenebattle_cachedTargetIdx = -1;
+            cycled = true;
+        }
+        if (scenebattle_cachedTargetIdx == a) selected = &scenebattle_actors[a];
+    }
+    u16 x = selected->x - 16;
+    u16 y = selected->y - 16;
+    SPR_setPosition(scenebattle_targetSelectorSprite, x, y);
+    return cycled;
+}
+bool sceenbattle_cycleSelectorThroughEnemies(RPG_StateBattler* actor) {
+    bool cycled = false;
+    u8 a = scenebattle_cachedTargetIdx;
+    bool hp0 = battler_determineIf0HP(actor);
+    RPG_StateBattler* selected = NULL;
+    while (selected == NULL) {
+        scenebattle_cachedTargetIdx++;
+        if (!scenebattle_enemies[scenebattle_cachedTargetIdx].hidden) {
+            bool dead = scenebattle_enemies[scenebattle_cachedTargetIdx].currHp <= 0;
+            if (dead == hp0) selected = &scenebattle_enemies[scenebattle_cachedTargetIdx];
+        }
+        if (scenebattle_cachedTargetIdx >= MAX_TROOP) {
+            scenebattle_cachedTargetIdx = -1;
+            cycled = true;
+        }
+        if (scenebattle_cachedTargetIdx == a) selected = &scenebattle_enemies[a];
+    }
+    u16 x = selected->x;
+    u16 y = selected->y - 16;
+    SPR_setPosition(scenebattle_targetSelectorSprite, x, y);
+    return cycled;
 }
 void scenebattle_destroyTargetSelector() {
     scenebattle_clearAuxWindow();
@@ -1349,6 +1402,21 @@ void scenebattle_updatePhase0ActionSelect() { //action select
                     }
                     break;
                 default:
+                    if (actor->actionTargetScope == EActionScope_ALLIES) {
+                        scenebattle_cycleSelectorThroughAllies(actor);
+                    }
+                    else if (actor->actionTargetScope == EActionScope_ENEMIES) {
+                        sceenbattle_cycleSelectorThroughEnemies(actor);
+                    }
+                    else if (actor->actionTargetScope == EActionScope_EVERYONE) {
+                        if (scenebattle_cyclingEnemies) {
+                            bool cycled = sceenbattle_cycleSelectorThroughEnemies(actor);
+                            if (cycled) scenebattle_cyclingEnemies = false;
+                        } else {
+                            bool cycled = scenebattle_cycleSelectorThroughAllies(actor);
+                            if (cycled) scenebattle_cyclingEnemies = true;
+                        }
+                    }
                     if (input_trigger(BUTTON_A)) {
                         scenebattle_destroyTargetSelector();
                         // Submit

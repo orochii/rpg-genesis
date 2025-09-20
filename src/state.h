@@ -188,7 +188,7 @@ void state_setupCharacter(u16 id, char avgLevel) {
 }
 void state_initCharacters() {
 	for (int i = 0; i < MAX_ACTORS; i++) {
-		state_setupCharacter(i, 1);
+		state_setupCharacter(i, 50);
 	}
 }
 void state_initParty() {

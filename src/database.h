@@ -72,44 +72,46 @@ typedef struct {
 	s16 effectParam4;
 	// visuals
 	u16 visualsIdx;
+	SpriteDefinition* visualsSprite;
+	bool moveToTarget;
 } RPG_DataSkill;
 const RPG_DataSkill DATA_SKILLS[28] = {
 	// NAME			DESCRIPTION					BATT MENU
 	// Basic
-	{ "Attack", 	"Deals basic damage.",		true,false,0,0,		EActionScope_ENEMY,		EActionEffect_PHYSDMG,1,10,0,0,			0}, //1		physDmg(base,mult)
-	{ "Guard", 		"Halves incoming damage.",	true,false,0,0,		EActionScope_USER,		EActionEffect_NONE,0,0,0,0,				0}, //2		none()
+	{ "Attack", 	"Deals basic damage.",		true,false,0,0,		EActionScope_ENEMY,		EActionEffect_PHYSDMG,1,10,0,0,			0,NULL,false}, //1		physDmg(base,mult)
+	{ "Guard", 		"Halves incoming damage.",	true,false,0,0,		EActionScope_USER,		EActionEffect_NONE,0,0,0,0,				0,NULL,false}, //2		none()
 	// SKILLS
-	{ "Critical", 	"Boosted basic attack.",	true,false,2,0,		EActionScope_ENEMY,		EActionEffect_PHYSDMG,1,15,0,0,			0}, //3		physDmg(base,mult)
-	{ "Tackle", 	"Basic hit, adds STUN.",	true,false,2,0,		EActionScope_ENEMY,		EActionEffect_PHYSDMGSTAT,1,7,EBattlerState_STUN,1,		0}, //4		physDmgStat(base,mult,stat,val)
-	{ "Provoke", 	"Gets foes attention.",		true,false,2,0,		EActionScope_USER,		EActionEffect_SETSTAT,EBattlerState_PROVOKE,0,-1,0,			0}, //5		setStat(s1,v1,s2,v2)
-	{ "Laser", 		"Piercing magic damage.",	true,false,4,0,		EActionScope_ENEMY,		EActionEffect_MAGICDMGPIERCE,12,16,0,0,	0}, //6		magicDmgPierce(base,mult)
+	{ "Critical", 	"Boosted basic attack.",	true,false,2,0,		EActionScope_ENEMY,		EActionEffect_PHYSDMG,1,15,0,0,			0,NULL,false}, //3		physDmg(base,mult)
+	{ "Tackle", 	"Basic hit, adds STUN.",	true,false,2,0,		EActionScope_ENEMY,		EActionEffect_PHYSDMGSTAT,1,7,EBattlerState_STUN,1,		0,NULL,false}, //4		physDmgStat(base,mult,stat,val)
+	{ "Provoke", 	"Gets foes attention.",		true,false,2,0,		EActionScope_USER,		EActionEffect_SETSTAT,EBattlerState_PROVOKE,0,-1,0,			0,NULL,false}, //5		setStat(s1,v1,s2,v2)
+	{ "Laser", 		"Piercing magic damage.",	true,false,4,0,		EActionScope_ENEMY,		EActionEffect_MAGICDMGPIERCE,12,16,0,0,	0,NULL,false}, //6		magicDmgPierce(base,mult)
 	// FIRE MAGIC - spends rubies
-	{ "Fire", 		"Low fire damage. -ATK.",	true,false,4,0,		EActionScope_ENEMY,		EActionEffect_MAGICDMGBUFF,24,10,EAttrib_ATK,-1,	0}, //7		magicDmgBuff(base,mult,buff,v)
-	{ "Flame", 		"Fire damage to all.",		true,false,8,0,		EActionScope_ENEMIES,	EActionEffect_MAGICDMG,20,10,0,0,		0}, //8		magicDmg(base,mult)
-	{ "Inferno", 	"Strong fire damage.",		true,false,12,0,	EActionScope_ENEMY,		EActionEffect_MAGICDMG,48,10,0,0,		0}, //9		magicDmg(base,mult)
-	{ "Burn", 		"Causes BURN.",				true,false,6,0,		EActionScope_ENEMY,		EActionEffect_SETSTAT,EBattlerState_BURN,-1,0,0,		0}, //10	setStat(s1,v1,s2,v2)
+	{ "Fire", 		"Low fire damage. -ATK.",	true,false,4,0,		EActionScope_ENEMY,		EActionEffect_MAGICDMGBUFF,24,10,EAttrib_ATK,-1,	0,NULL,false}, //7		magicDmgBuff(base,mult,buff,v)
+	{ "Flame", 		"Fire damage to all.",		true,false,8,0,		EActionScope_ENEMIES,	EActionEffect_MAGICDMG,20,10,0,0,		0,NULL,false}, //8		magicDmg(base,mult)
+	{ "Inferno", 	"Strong fire damage.",		true,false,12,0,	EActionScope_ENEMY,		EActionEffect_MAGICDMG,48,10,0,0,		0,NULL,false}, //9		magicDmg(base,mult)
+	{ "Burn", 		"Causes BURN.",				true,false,6,0,		EActionScope_ENEMY,		EActionEffect_SETSTAT,EBattlerState_BURN,-1,0,0,		0,NULL,false}, //10	setStat(s1,v1,s2,v2)
 	// WATER MAGIC - spends sapphires
-	{ "Ice", 		"Low water damage. -DEF",	true,false,4,0,		EActionScope_ENEMY,		EActionEffect_MAGICDMGBUFF,24,10,EAttrib_DEF,-1,	0}, //11	magicDmgBuff(base,mult,buff,v)
-	{ "Winter", 	"Water damage to all.",		true,false,8,0,		EActionScope_ENEMIES,	EActionEffect_MAGICDMG,20,10,0,0,		0}, //12	magicDmg(base,mult)
-	{ "Blizzard", 	"Strong water damage.",		true,false,12,0,	EActionScope_ENEMY,		EActionEffect_MAGICDMG,48,10,0,0,		0}, //13	magicDmg(base,mult)
-	{ "Freeze", 	"Causes FROZEN.",			true,false,6,0,		EActionScope_ENEMY,		EActionEffect_SETSTAT,EBattlerState_FROZEN,3,-1,0,		0}, //14	setStat(s1,v1,s2,v2)
+	{ "Ice", 		"Low water damage. -DEF",	true,false,4,0,		EActionScope_ENEMY,		EActionEffect_MAGICDMGBUFF,24,10,EAttrib_DEF,-1,	0,NULL,false}, //11	magicDmgBuff(base,mult,buff,v)
+	{ "Winter", 	"Water damage to all.",		true,false,8,0,		EActionScope_ENEMIES,	EActionEffect_MAGICDMG,20,10,0,0,		0,NULL,false}, //12	magicDmg(base,mult)
+	{ "Blizzard", 	"Strong water damage.",		true,false,12,0,	EActionScope_ENEMY,		EActionEffect_MAGICDMG,48,10,0,0,		0,NULL,false}, //13	magicDmg(base,mult)
+	{ "Freeze", 	"Causes FROZEN.",			true,false,6,0,		EActionScope_ENEMY,		EActionEffect_SETSTAT,EBattlerState_FROZEN,3,-1,0,		0,NULL,false}, //14	setStat(s1,v1,s2,v2)
 	// WIND MAGIC - spends emeralds
-	{ "Windcut", 	"Low wind damage. -SPD.",	true,false,4,0,		EActionScope_ENEMY,		EActionEffect_MAGICDMGBUFF,24,10,EAttrib_SPD,-1,	0}, //15	magicDmgBuff(base,mult,buff,v)
-	{ "Storm", 		"Wind damage to all.",		true,false,8,0,		EActionScope_ENEMIES,	EActionEffect_MAGICDMG,20,10,0,0,		0}, //16	magicDmg(base,mult)
-	{ "Thunder", 	"Strong wind damage.",		true,false,12,0,	EActionScope_ENEMY,		EActionEffect_MAGICDMG,48,10,0,0,		0}, //17	magicDmg(base,mult)
-	{ "Evasion", 	"Causes EVASION.",			true,false,6,0,		EActionScope_ALLY,		EActionEffect_SETSTAT,EBattlerState_EVASION,2,-1,0,		0}, //18	setStat(s1,v1,s2,v2)
+	{ "Windcut", 	"Low wind damage. -SPD.",	true,false,4,0,		EActionScope_ENEMY,		EActionEffect_MAGICDMGBUFF,24,10,EAttrib_SPD,-1,	0,NULL,false}, //15	magicDmgBuff(base,mult,buff,v)
+	{ "Storm", 		"Wind damage to all.",		true,false,8,0,		EActionScope_ENEMIES,	EActionEffect_MAGICDMG,20,10,0,0,		0,NULL,false}, //16	magicDmg(base,mult)
+	{ "Thunder", 	"Strong wind damage.",		true,false,12,0,	EActionScope_ENEMY,		EActionEffect_MAGICDMG,48,10,0,0,		0,NULL,false}, //17	magicDmg(base,mult)
+	{ "Evasion", 	"Causes EVASION.",			true,false,6,0,		EActionScope_ALLY,		EActionEffect_SETSTAT,EBattlerState_EVASION,2,-1,0,		0,NULL,false}, //18	setStat(s1,v1,s2,v2)
 	// HOLY MAGIC - spends citrines
-	{ "Missile", 	"Magic damage to all.",		true,true,4,0,		EActionScope_ENEMIES,	EActionEffect_MAGICDMG,16,15,0,0,		0}, //19	magicDmg(base,mult)
-	{ "Heal", 		"Heals some HP.",			true,true,4,0,		EActionScope_ALLY,		EActionEffect_MAGICDMGPIERCE,-12,20,0,0,0}, //20	magicDmgPierce(base,mult)
-	{ "Regen", 		"Heals 1/16HP per turn.",	true,false,10,0,	EActionScope_ALLIES,	EActionEffect_SETSTAT,EBattlerState_REGEN,2,-1,0,		0}, //21	setStat(s1,v1,s2,v2)
-	{ "Remedy", 	"Cures BURN and FROZEN.",	true,true,6,0,		EActionScope_ALLY,		EActionEffect_SETSTAT,EBattlerState_BURN,0,EBattlerState_FROZEN,0,		0}, //22	setStat(s1,v1,s2,v2)
-	{ "Revive", 	"Cures KO.",				true,true,10,0,		EActionScope_ALLY,		EActionEffect_REVIVE,25,0,0,0,			0}, //23	revive(perc)
-	{ "Nuke", 		"Massive magic damage.",	true,true,40,-10,	EActionScope_ENEMY,		EActionEffect_MAGICDMGBUFF,60,20,EAttrib_MAG,-1,			0}, //24	magicDmgBuff(perc)
+	{ "Missile", 	"Magic damage to all.",		true,false,4,0,		EActionScope_ENEMIES,	EActionEffect_MAGICDMG,16,15,0,0,		0,NULL,false}, //19	magicDmg(base,mult)
+	{ "Heal", 		"Heals some HP.",			true,true,4,0,		EActionScope_ALLY,		EActionEffect_MAGICDMGPIERCE,-12,20,0,0,0,NULL,false}, //20	magicDmgPierce(base,mult)
+	{ "Regen", 		"Heals 1/16HP per turn.",	true,false,10,0,	EActionScope_ALLIES,	EActionEffect_SETSTAT,EBattlerState_REGEN,2,-1,0,		0,NULL,false}, //21	setStat(s1,v1,s2,v2)
+	{ "Remedy", 	"Cures BURN and FROZEN.",	true,true,6,0,		EActionScope_ALLY,		EActionEffect_SETSTAT,EBattlerState_BURN,0,EBattlerState_FROZEN,0,		0,NULL,false}, //22	setStat(s1,v1,s2,v2)
+	{ "Revive", 	"Cures KO.",				true,true,10,0,		EActionScope_ALLY,		EActionEffect_REVIVE,25,0,0,0,			0,NULL,false}, //23	revive(perc)
+	{ "Nuke", 		"High magic damage.-MAG",	true,false,40,-10,	EActionScope_ENEMY,		EActionEffect_MAGICDMGBUFF,60,20,EAttrib_MAG,-1,			0,NULL,false}, //24	magicDmgBuff(perc)
 	// STATUS MAGIC (?) - I guess also spends citrines? or maybe onyxes, and they're rare
-	{ "Strong", 	"Powers up ATK.",			true,false,12,0,	EActionScope_ALLY,		EActionEffect_BUFF,EAttrib_ATK,1,-1,0,				0}, //25	buff(buff,v)
-	{ "Durable", 	"Powers up DEF.",			true,false,12,0,	EActionScope_ALLY,		EActionEffect_BUFF,EAttrib_DEF,1,-1,0,				0}, //26	buff(buff,v)
-	{ "Sage", 		"Powers up MAG.",			true,false,12,0,	EActionScope_ALLY,		EActionEffect_BUFF,EAttrib_MAG,1,-1,0,				0}, //27	buff(buff,v)
-	{ "Swift", 		"Powers up SPD.",			true,false,12,0,	EActionScope_ALLY,		EActionEffect_BUFF,EAttrib_SPD,1,-1,0,				0}, //28	buff(buff,v)
+	{ "Strong", 	"Powers up ATK.",			true,false,12,0,	EActionScope_ALLY,		EActionEffect_BUFF,EAttrib_ATK,1,-1,0,				0,NULL,false}, //25	buff(buff,v)
+	{ "Durable", 	"Powers up DEF.",			true,false,12,0,	EActionScope_ALLY,		EActionEffect_BUFF,EAttrib_DEF,1,-1,0,				0,NULL,false}, //26	buff(buff,v)
+	{ "Sage", 		"Powers up MAG.",			true,false,12,0,	EActionScope_ALLY,		EActionEffect_BUFF,EAttrib_MAG,1,-1,0,				0,NULL,false}, //27	buff(buff,v)
+	{ "Swift", 		"Powers up SPD.",			true,false,12,0,	EActionScope_ALLY,		EActionEffect_BUFF,EAttrib_SPD,1,-1,0,				0,NULL,false}, //28	buff(buff,v)
 };
 typedef struct {
 	const char* name;
@@ -128,19 +130,21 @@ typedef struct {
 	u16 effectParam4;
 	// visuals
 	u16 visualsIdx;
+	SpriteDefinition* visualsSprite;
+	bool moveToTarget;
 } RPG_DataItem;
 const RPG_DataItem DATA_ITEMS[10] = {
-	{ "Potion","Recover 30% HP." 		,true,true,true,0,	EActionScope_ALLY,EActionEffect_PERCDMG,-30,0,0,0, 	0 },	//percDmg(perc)
-	{ "HiPotion","Recover 60% HP." 		,true,true,true,0,	EActionScope_ALLY,EActionEffect_PERCDMG,-60,0,0,0, 	0 },	//percDmg(perc)
-	{ "Elixir","Full recovery."			,true,true,true,0,	EActionScope_ALLY,EActionEffect_PERCDMG,-100,0,0,0, 0 },	//percDmg(perc)
-	{ "Remedy","Cures BURN."			,true,true,true,0,	EActionScope_ALLY,EActionEffect_SETSTAT,EBattlerState_BURN,0,-1,0, 		0 },	//setStat(s1,v1,s2,v2)
-	{ "Thaw","Cures FROZEN."			,true,true,true,0,	EActionScope_ALLY,EActionEffect_SETSTAT,EBattlerState_FROZEN,0,-1,0, 	0 },	//setStat(s1,v1,s2,v2)
-	{ "Reviver","Cures KO." 			,true,true,true,0,	EActionScope_ALLY,EActionEffect_REVIVE,100,0,0,0, 	0 },	//revive(perc)
-	{ "Ruby","Powers FIRE magic."		,false,false,true,0,EActionScope_USER,EActionEffect_NONE,0,0,0,0,		0 },	//none()
-	{ "Sapphire","Powers WATER magic."	,false,false,true,0,EActionScope_USER,EActionEffect_NONE,0,0,0,0,		0 },	//none()
-	{ "Emerald","Powers WIND magic."	,false,false,true,0,EActionScope_USER,EActionEffect_NONE,0,0,0,0,		0 },	//none()
-	{ "Citrine","Powers HOLY magic."	,false,false,true,0,EActionScope_USER,EActionEffect_NONE,0,0,0,0,		0 },	//none()
-	{ "Onyx","Powers NATURE magic."		,false,false,true,0,EActionScope_USER,EActionEffect_NONE,0,0,0,0,		0 },	//none()
+	{ "Potion","Recover 30% HP." 		,true,true,true,0,	/*Effect*/EActionScope_ALLY,EActionEffect_PERCDMG,-30,0,0,0, 					/*Visuals*/0,NULL,false },	//percDmg(perc)
+	{ "HiPotion","Recover 60% HP." 		,true,true,true,0,	/*Effect*/EActionScope_ALLY,EActionEffect_PERCDMG,-60,0,0,0, 					/*Visuals*/0,NULL,false },	//percDmg(perc)
+	{ "Elixir","Full recovery."			,true,true,true,0,	/*Effect*/EActionScope_ALLY,EActionEffect_PERCDMG,-100,0,0,0, 					/*Visuals*/0,NULL,false },	//percDmg(perc)
+	{ "Remedy","Cures BURN."			,true,true,true,0,	/*Effect*/EActionScope_ALLY,EActionEffect_SETSTAT,EBattlerState_BURN,0,-1,0, 	/*Visuals*/0,NULL,false },	//setStat(s1,v1,s2,v2)
+	{ "Thaw","Cures FROZEN."			,true,true,true,0,	/*Effect*/EActionScope_ALLY,EActionEffect_SETSTAT,EBattlerState_FROZEN,0,-1,0, 	/*Visuals*/0,NULL,false },	//setStat(s1,v1,s2,v2)
+	{ "Reviver","Cures KO." 			,true,true,true,0,	/*Effect*/EActionScope_ALLY,EActionEffect_REVIVE,100,0,0,0, 					/*Visuals*/0,NULL,false },	//revive(perc)
+	{ "Ruby","Powers FIRE magic."		,false,false,true,0,/*Effect*/EActionScope_USER,EActionEffect_NONE,0,0,0,0,							/*Visuals*/0,NULL,false },	//none()
+	{ "Sapphire","Powers WATER magic."	,false,false,true,0,/*Effect*/EActionScope_USER,EActionEffect_NONE,0,0,0,0,							/*Visuals*/0,NULL,false },	//none()
+	{ "Emerald","Powers WIND magic."	,false,false,true,0,/*Effect*/EActionScope_USER,EActionEffect_NONE,0,0,0,0,							/*Visuals*/0,NULL,false },	//none()
+	{ "Citrine","Powers HOLY magic."	,false,false,true,0,/*Effect*/EActionScope_USER,EActionEffect_NONE,0,0,0,0,							/*Visuals*/0,NULL,false },	//none()
+	{ "Onyx","Powers NATURE magic."		,false,false,true,0,/*Effect*/EActionScope_USER,EActionEffect_NONE,0,0,0,0,							/*Visuals*/0,NULL,false },	//none()
 };
 typedef struct {
 	char condition;
